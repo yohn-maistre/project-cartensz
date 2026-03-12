@@ -1,0 +1,47 @@
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# venv
+.venv/
+venv/
+env/
+
+# ide
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# env
+.env
+
+# data artifacts (large files)
+data/raw/
+data/setfit_model/
+data/nusabert_ft/
+*.duckdb
+*.duckdb.wal
+
+# model checkpoints
+*.pt
+*.bin
+*.safetensors
+checkpoint-*/
+
+# notebooks
+.ipynb_checkpoints/
+
+# os
+.DS_Store
+Thumbs.db
+
+# misc
+*.log
