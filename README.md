@@ -1,8 +1,8 @@
-# project cartensz
+# Project Cartensz
 
-analisis ancaman untuk teks bahasa indonesia. mengklasifikasikan teks ke dalam tingkat risiko (aman/waspada/tinggi) dan mengekstrak sinyal ancaman.
+Analisis ancaman untuk teks bahasa Indonesia. Sistem ini mengklasifikasikan teks ke dalam tingkat risiko (Aman/Waspada/Tinggi) dan mengekstrak sinyal ancaman.
 
-## instalasi
+## Instalasi
 
 ```bash
 git clone https://github.com/yosegiyay/gsp-threat-classifier.git
@@ -10,3 +10,10 @@ cd gsp-threat-classifier
 pip install -r requirements.txt
 cp .env.example .env
 ```
+
+## Fitur
+
+- **Preproses Teks**: Agen khusus untuk membersihkan teks mentah. Dapat membuang URL, mengubah emoji ancaman menjadi penanda teks (misalnya 💣 menjadi [bom]), dan membakukan bahasa gaul Indonesia agar lebih mudah dianalisis.
+- **Kamus Eufemisme**: Dilengkapi dengan kamus kode, bahasa gaul ancaman, dan pola kalimat yang menunjukkan urgensi untuk mendeteksi ancaman terselubung.
+- **Ekstraktor Sinyal**: Mengekstrak sinyal ancaman menggunakan pola RegEx murni tanpa LLM untuk menjamin kecepatan proses.
+- **Klien LLM Pintar**: Menggunakan `litellm` sebagai jembatan ke model bahasa (Gemini/Ollama) dengan fitur rotasi API Key otomatis jika terkena *rate-limit* dan penyimpanan (*caching*) respons bawaan agar lebih hemat kuota.
