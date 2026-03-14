@@ -1,33 +1,59 @@
-version: '3.8'
+version: "3.9"
 
 services:
+  # ─── FastAPI Backend ──────────────────────────────────────────────────
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     container_name: cartensz-api
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
+    env_file: .env
     environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - PYTHONUNBUFFERED=1
     volumes:
-      - ./data:/app/data
-      - ./runs:/app/runs
-    command: ["uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+      - ./data:/app/data    # Persistent DuckDB + model data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     restart: unless-stopped
 
+  # ─── Streamlit UI ─────────────────────────────────────────────────────
   ui:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     container_name: cartensz-ui
+    command: streamlit run ui/app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
     ports:
       - "8501:8501"
+    env_file: .env
     environment:
       - API_URL=http://api:8000
+      - PYTHONUNBUFFERED=1
     volumes:
       - ./data:/app/data
     depends_on:
-      - api
-    command: ["uv", "run", "streamlit", "run", "ui/app.py", "--server.port", "8501", "--server.address", "0.0.0.0"]
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─── Scheduled OSINT Scraper (6 AM WIB = 23:00 UTC) ──────────────────
+  scraper:
+    build: .
+    container_name: cartensz-scraper
+    entrypoint: /bin/sh
+    command: >
+      -c "apt-get update && apt-get install -y --no-install-recommends cron &&
+      echo '0 23 * * * cd /app && /app/.venv/bin/python scripts/daily_scrape.py >> /var/log/scraper.log 2>&1' | crontab - &&
+      cron -f"
+    env_file: .env
+    environment:
+      - API_URL=http://api:8000
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
