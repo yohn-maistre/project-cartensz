@@ -1,5 +1,5 @@
 """
-Project Cartensz: Intelligence Command Center V4
+Project Cartensz — Intelligence Command Center V4
 """
 import streamlit as st
 import sys
@@ -12,10 +12,10 @@ import pandas as pd
 import numpy as np
 import requests
 
-# Pastikan path utama proyek dapat diakses.
+# Ensure project root is importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-# --- Tambalan sementara untuk kompatibilitas setfit/transformers ---
+# --- Monkey-patch for setfit/transformers compatibility ---
 import transformers.training_args as _ta
 if not hasattr(_ta, "default_logdir"):
     import socket
@@ -25,19 +25,19 @@ if not hasattr(_ta, "default_logdir"):
         current_time = _dt.now().strftime("%b%d_%H-%M-%S")
         return str(_Path("runs") / f"{current_time}_{socket.gethostname()}")
     _ta.default_logdir = _default_logdir
-# --- Akhir tambalan ---
+# --- End monkey-patch ---
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 
-# ─── Konfigurasi Halaman ──────────────────────────────────────────────────────
+# ─── Page Config ──────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Project Cartensz: Command Center",
+    page_title="Project Cartensz — Command Center",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ─── Kustomisasi CSS ───────────────────────────────────────────────────────
+# ─── Custom CSS ───────────────────────────────────────────────────────
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap');
@@ -70,7 +70,7 @@ st.markdown("""
     
     .risk-bar { height: 8px; border-radius: 4px; margin-top: 0.5rem; }
 
-    /* Kotak Obrolan Agen Intelijen - kontainer dapat digulir dan tinggi tetap */
+    /* Intel Agent Chat — scrollable fixed-height container */
     .agent-chat-box {
         max-height: 350px;
         overflow-y: auto;
@@ -90,14 +90,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Fungsi Bantuan ─────────────────────────────────────────────────
+# ─── Helper Functions ─────────────────────────────────────────────────
 def get_risk_color(score: int) -> str:
     if score <= 30: return "#10b981"
     elif score <= 60: return "#f59e0b"
     else: return "#ef4444"
 
 def md_to_html(text: str) -> str:
-    """Mengonversi markdown sederhana menjadi HTML untuk obrolan agen."""
+    """Convert simple markdown (bold, bullets, newlines) to HTML for agent chat."""
     t = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     t = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', t)
     t = re.sub(r'\*(.+?)\*', r'<em>\1</em>', t)
@@ -134,34 +134,34 @@ def render_signals(signals):
         )
 
 def render_deep_analysis(brief):
-    """Menampilkan panel Radar secara penuh untuk satu hasil analisis."""
+    """Render the full Radar panel for a single analysis result."""
     c = brief["classification"]
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         risk_color = get_risk_color(brief["risk_score"])
-        st.markdown(f'<div class="metric-card"><h3 style="color:{risk_color}">{brief["risk_score"]}</h3><p>Skor Risiko (0-100)</p></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card"><h3 style="color:{risk_color}">{brief["risk_score"]}</h3><p>Risk Score (0-100)</p></div>', unsafe_allow_html=True)
     with col2:
-        st.markdown(f'<div class="metric-card"><h3>{c["label"]}</h3><p>Keputusan</p></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card"><h3>{c["label"]}</h3><p>Keputusan (Fusi)</p></div>', unsafe_allow_html=True)
     with col3:
         rec_map = {"ARCHIVE": "ARSIP", "MONITOR": "PANTAU", "ESCALATE": "ESKALASI"}
         rec_label = rec_map.get(brief["recommendation"], brief["recommendation"])
         st.markdown(f'<div class="metric-card"><h3>{rec_label}</h3><p>Rekomendasi</p></div>', unsafe_allow_html=True)
     with col4:
-        st.markdown(f'<div class="metric-card"><h3>{c.get("confidence", "")}</h3><p>Keyakinan</p></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card"><h3>{c.get("confidence", "")}</h3><p>Confidence</p></div>', unsafe_allow_html=True)
     
-    # Indikator skor risiko visual
+    # Risk bar
     risk_pct = brief["risk_score"]
     bar_color = get_risk_color(risk_pct)
     st.markdown(f'<div class="risk-bar" style="background: linear-gradient(to right, {bar_color} {risk_pct}%, #1c0d28 {risk_pct}%);"></div>', unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Ringkasan Eksekutif
-    st.markdown("#### 📝 Laporan Eksekutif")
+    # Executive Summary
+    st.markdown("#### 📝 Executive Summary")
     st.write(brief["summary_narrative"])
     
-    # Probabilitas dan Ketidakpastian
+    # Probabilities & Uncertainty
     st.markdown("#### 📊 Probabilitas & Ketidakpastian")
     prob_col1, prob_col2, prob_col3 = st.columns(3)
     probs = c.get("probabilities", {})
@@ -170,73 +170,73 @@ def render_deep_analysis(brief):
     prob_col3.metric("TINGGI", f"{probs.get('TINGGI', 0)*100:.1f}%")
     
     stats_col1, stats_col2 = st.columns(2)
-    stats_col1.metric("Entropi Shannon", f"{c.get('entropy', 0):.4f}")
-    stats_col2.metric("Himpunan Prediksi", str(c.get('prediction_set', [])))
+    stats_col1.metric("Shannon Entropy", f"{c.get('entropy', 0):.4f}")
+    stats_col2.metric("Prediction Set", str(c.get('prediction_set', [])))
     
-    # Sinyal Ancaman
+    # Threat Signals
     st.markdown(f"#### 🚨 Sinyal Ancaman ({len(brief.get('signals_detected', []))} terdeteksi)")
     render_signals(brief.get("signals_detected", []))
     
-    # Alur Logika Keputusan
+    # Chain of Thought
     with st.expander("🧠 Penalaran AI (Chain-of-Thought)", expanded=False):
         st.write(c.get("reasoning", ""))
     
-    # Ambiguitas
+    # Ambiguity
     if brief.get("ambiguity_notes"):
         with st.expander("⚠️ Catatan Ambiguitas", expanded=False):
             st.warning(brief["ambiguity_notes"])
 
-# ─── Panel Navigasi Samping ────────────────────────────────────
+# ─── Sidebar (About + Data Entry) ────────────────────────────────────
 with st.sidebar:
     st.markdown("""
     <div style="text-align: center; margin-bottom: 1rem;">
         <h2 style="margin-bottom:0;"><span style="color:#a855f7;">🛡️</span> Project Cartensz</h2>
-        <p style="color:#d8b4fe; font-size:0.85rem; margin-top:0.2rem;">Pusat Komando Intelijen</p>
+        <p style="color:#d8b4fe; font-size:0.85rem; margin-top:0.2rem;">Threat Intelligence Platform</p>
     </div>
     """, unsafe_allow_html=True)
     
-    with st.expander("ℹ️ Tentang Sistem", expanded=False):
+    with st.expander("ℹ️ Tentang Cartensz", expanded=False):
         st.markdown("""
-        Cartensz mendeteksi narasi ancaman berbahasa Indonesia 
-        menggunakan pipeline NLP berbasis fusi.
+        **Apa ini?** Cartensz mendeteksi narasi ancaman berbahasa Indonesia 
+        menggunakan pipeline NLP fusi khusus.
         
         **⚙️ Arsitektur:**
-        1. **Prapemrosesan:** Normalisasi teks.
+        1. **Preprocessor:** Normalisasi slang/code-switching.
         2. **Sinyal:** Ekstraksi Leksikon (eufemisme, CTA).
-        3. **Filter Cepat:** `NusaBERT` + `SetFit` (bebas biaya LLM).
-        4. **Analisis Dalam:** Penalaran `Gemini 3 Flash` (1 panggilan LLM).
+        3. **Ahli Lokal:** `NusaBERT` + `SetFit` (0 LLM cost).
+        4. **Safety Net:** `Gemini 3 Flash` CoT reasoning (1 LLM call).
         
-        **📊 Kuantifikasi Keraguan:**
-        - Entropi Shannon dari distribusi prediksi.
-        - Himpunan Prediksi Konformal adaptif.
-        - Bobot Perhatian dari NusaBERT.
+        **📊 Uncertainty Quantification:**
+        - Shannon Entropy dari distribusi probabilitas.
+        - Conformal Prediction Set (Adaptive).
+        - Attention Weights dari NusaBERT.
         
-        **🏷️ Kategori Status:**
-        - 🟢 **AMAN** — Aman.
-        - 🟡 **WASPADA** — Ambigu, memerlukan pemantauan.
-        - 🔴 **TINGGI** — Terdapat indikasi teror.
+        **🏷️ Label:**
+        - 🟢 **AMAN** — Tidak ada ancaman.
+        - 🟡 **WASPADA** — Ambigu, perlu pantauan.
+        - 🔴 **TINGGI** — Ancaman nyata terdeteksi.
         """)
         
     st.markdown("<hr style='border-color:#2b1744;'>", unsafe_allow_html=True)
-    st.markdown("### 📥 Sumber Masukan")
+    st.markdown("### 📥 Masukkan Data")
     
     input_method = st.radio("Metode:", ["🕸️ OSINT Scraper", "✍️ Manual / Paste", "📂 Unggah File", "🎤 Audio (ASR)"], label_visibility="collapsed")
     
-    # ─── Pengumpulan OSINT Otomatis ────────────────────────────────────────────────
+    # ─── OSINT Scraper ────────────────────────────────────────────────
     if "OSINT Scraper" in input_method:
-        st.caption("Pilih sasaran:")
+        st.caption("Pilih sumber data OSINT:")
         use_reddit = st.checkbox("🔴 Reddit", value=True)
         use_rss = st.checkbox("📰 RSS (Detik, Tempo)", value=True)
         use_youtube = st.checkbox("🎬 YouTube", value=True)
-        use_telegram = st.checkbox("✈️ Telegram", value=False, disabled=True, help="Belum diaktifkan")
+        use_telegram = st.checkbox("✈️ Telegram", value=False, disabled=True, help="Belum dikonfigurasi")
         
         st.markdown("<hr style='border-color:#2b1744; margin:0.5rem 0;'>", unsafe_allow_html=True)
-        use_custom = st.checkbox("🔗 Tautan Spesifik")
+        use_custom = st.checkbox("🔗 Custom URL")
         if use_custom:
-            custom_url = st.text_input("Tautan (URL):", placeholder="https://...")
+            custom_url = st.text_input("Masukkan URL:", placeholder="https://...")
         
-        if st.button("🕸️ Eksekusi Scraper", use_container_width=True):
-            with st.spinner("Sedang mengekstraksi data..."):
+        if st.button("🕸️ Jalankan Scraper", use_container_width=True):
+            with st.spinner("Scraping dari sumber terpilih..."):
                 try:
                     from scripts.collector import (
                         scrape_reddit, scrape_rss, scrape_youtube,
@@ -249,23 +249,24 @@ with st.sidebar:
                         for t in RSS_TARGETS: all_items.extend(scrape_rss(t, debug=False))
                     if use_youtube:
                         for t in YOUTUBE_TARGETS: all_items.extend(scrape_youtube(t, debug=False))
-                    # Normalisasi format input menjadi dictionary standar
+                    # Normalize: ensure all items are dicts with text/source/url
                     normalized = []
                     for it in all_items:
                         if isinstance(it, dict) and it.get("text", "").strip():
+                            # Ensure source and url keys exist
                             it.setdefault("source", "OSINT")
                             it.setdefault("url", "")
                             normalized.append(it)
                     all_items = normalized
                     st.session_state["raw_triage_items"] = all_items
                     st.session_state["raw_triage_texts"] = [it["text"] for it in all_items]
-                    st.success(f"Terekstrak: {len(all_items)} dokumen.")
+                    st.success(f"Berhasil: {len(all_items)} teks.")
                 except Exception as e:
-                    st.error(f"Kesalahan koneksi: {e}")
+                    st.error(f"Gagal: {e}")
                     
-    # ─── Pemasukan Teks Manual ───────────────────────────────────────────────
+    # ─── Manual / Paste ───────────────────────────────────────────────
     elif "Manual" in input_method:
-        example_choice = st.selectbox("Contoh kalimat:", [
+        example_choice = st.selectbox("Atau mulai dengan contoh:", [
             "(Ketik sendiri)",
             "Kemacetan terpantau di Jalan Sudirman pagi ini.",
             "Mereka dari barat mulai ikut campur urusan kita. Jangan biarkan mereka mengambil tanah leluhur.",
@@ -274,75 +275,75 @@ with st.sidebar:
         ])
         
         default_val = "" if example_choice == "(Ketik sendiri)" else example_choice
-        manual_text = st.text_area("Konten:", value=default_val, height=120)
+        manual_text = st.text_area("Masukkan teks:", value=default_val, height=120)
         
-        if st.button("🔍 Lakukan Analisis", use_container_width=True):
+        if st.button("🔍 Analisis", use_container_width=True):
             lines = [l.strip() for l in manual_text.strip().split("\n") if l.strip()]
             if lines:
                 if len(lines) == 1:
-                    # Baris tunggal: luncurkan jendela dialog
+                    # Single text: trigger dialog directly
                     st.session_state["_dialog_text"] = lines[0]
                     st.rerun()
                 else:
-                    # Baris ganda: masukkan ke dalam antrean klasifikasi massal
+                    # Multi-line: add to triage queue
                     items = [{"text": l, "source": "Manual", "url": ""} for l in lines]
                     st.session_state["raw_triage_items"] = items
                     st.session_state["raw_triage_texts"] = [it["text"] for it in items]
                     
-    # ─── Pengolahan Melalui Berkas ──────────────────────────────────────────────────
+    # ─── File Upload ──────────────────────────────────────────────────
     elif "Unggah" in input_method:
-        upload_file = st.file_uploader("Format CSV / TXT", type=["csv", "txt"])
-        if upload_file and st.button("Mulai Proses File", use_container_width=True):
+        upload_file = st.file_uploader("CSV / TXT", type=["csv", "txt"])
+        if upload_file and st.button("Proses File", use_container_width=True):
             if upload_file.name.endswith('.csv'):
                 df = pd.read_csv(upload_file)
                 texts = df.iloc[:, 0].dropna().astype(str).tolist()
             else:
                 texts = [l.strip() for l in upload_file.read().decode('utf-8').split("\n") if l.strip()]
             texts = [t for t in texts if t.strip()]
-            items = [{"text": t, "source": f"File Import: {upload_file.name}", "url": ""} for t in texts]
+            items = [{"text": t, "source": f"File: {upload_file.name}", "url": ""} for t in texts]
             st.session_state["raw_triage_items"] = items
             st.session_state["raw_triage_texts"] = [it["text"] for it in items]
 
-    # ─── Perekaman dan Transkripsi Suara ────────────────────────────────────────────
+    # ─── Audio Upload (ASR) ────────────────────────────────────────────
     elif "Audio" in input_method:
-        st.caption("Penerjemah audio bahasa melalui Qwen3-ASR-0.6B")
-        asr_tab_file, asr_tab_mic = st.tabs(["📂 Pilih File", "🎙️ Rekam Langsung"])
+        st.caption("Transkripsi otomatis menggunakan Qwen3-ASR-0.6B")
+        asr_tab_file, asr_tab_mic = st.tabs(["📂 Upload", "🎙️ Rekam"])
 
         audio_bytes = None
         audio_name = "recording.wav"
 
         with asr_tab_file:
-            audio_file = st.file_uploader("Berkas Suara", type=["wav", "mp3", "ogg", "flac", "m4a", "webm"], label_visibility="collapsed")
+            audio_file = st.file_uploader("Audio", type=["wav", "mp3", "ogg", "flac", "m4a", "webm"], label_visibility="collapsed")
             if audio_file:
                 st.audio(audio_file)
                 audio_bytes = audio_file.read()
                 audio_name = audio_file.name
 
         with asr_tab_mic:
-            mic_audio = st.audio_input("Gunakan mikrofon untuk berbicara")
+            mic_audio = st.audio_input("Klik untuk mulai merekam")
             if mic_audio:
                 audio_bytes = mic_audio.read()
                 audio_name = "mic_recording.wav"
 
-        if audio_bytes and st.button("🎤 Lakukan Transkripsi dan Analisis", type="primary", use_container_width=True):
-            with st.spinner("Mengubah suara menjadi teks..."):
+        if audio_bytes and st.button("🎤 Transkripsi & Analisis", type="primary", use_container_width=True):
+            with st.spinner("Mentranskripsi audio dengan Qwen3-ASR..."):
                 try:
                     from src.asr.transcriber import transcribe_bytes
                     asr_result = transcribe_bytes(audio_bytes, filename=audio_name)
                     transcribed = asr_result["text"]
-                    st.success(f"Logat terdeteksi: {asr_result['language']}")
-                    st.text_area("Cuplikan Naskah:", transcribed, height=100, disabled=True)
+                    st.success(f"Bahasa: {asr_result['language']}")
+                    st.text_area("Hasil Transkripsi:", transcribed, height=100, disabled=True)
                     if transcribed.strip():
                         st.session_state["_dialog_text"] = transcribed
                 except Exception as e:
-                    st.error(f"Gagal melakukan proses asr: {e}")
+                    st.error(f"ASR Error: {e}")
 
-    # Tombol Eksekusi Triage Massal (tampil tepat di bawah blok data masukan)
+    # Execute Triage (inline, right below data input)
     if st.session_state.get("raw_triage_texts") and not st.session_state.get("auto_radar_text"):
         n_texts = len(st.session_state["raw_triage_texts"])
-        st.caption(f"📋 Terdeteksi **{n_texts}** item di memori tunggu.")
-        if st.button("⚡ INISIASI KATEGORISASI (TRIAGE)", type="primary", use_container_width=True):
-            with st.spinner(f"Sortir {n_texts} item dengan mesin SetFit..."):
+        st.caption(f"📋 **{n_texts}** teks siap untuk triage.")
+        if st.button("⚡ JALANKAN TRIAGE", type="primary", use_container_width=True):
+            with st.spinner(f"Classifying {n_texts} texts via SetFit..."):
                 try:
                     all_briefs = []
                     texts = st.session_state["raw_triage_texts"]
@@ -353,36 +354,36 @@ with st.sidebar:
                         if resp.status_code == 200:
                             all_briefs.extend(resp.json().get("briefs", []))
                         else:
-                            st.error(f"Kegagalan blok penyortiran indeks {i}: {resp.text}")
+                            st.error(f"Batch Error chunk {i}: {resp.text}")
                     st.session_state["triage_results"] = all_briefs
-                    st.success("Prioritas kategorisasi berhasil disesuaikan!")
+                    st.success("Triage selesai!")
                 except Exception as e:
-                    st.error(f"Komunikasi API tumbang: {e}")
+                    st.error(f"API Error: {e}")
 
-    # ─── Chatbot Analis Keamanan Siber (ADK) ──────────────────────────────────────────
+    # ─── Intel Agent Chat (ADK) ──────────────────────────────────────────
     st.markdown("<hr style='border-color:#2b1744; margin-top:1rem;'>", unsafe_allow_html=True)
-    st.markdown("### 🤖 Agen Pendamping")
+    st.markdown("### 🤖 Intel Agent")
 
-    # Penyusunan memori sesi obrolan awal
+    # Initialize chat history
     if "agent_messages" not in st.session_state:
         st.session_state["agent_messages"] = []
 
-    # Kontainer pembungkus ruang ketik
+    # Scrollable chat container
     chat_html = '<div class="agent-chat-box" id="agent-chat-box">'
     if not st.session_state["agent_messages"]:
-        chat_html += '<div style="color:#6b5b7b; font-size:0.8rem; text-align:center; padding:1rem;">Ketuk agen untuk asisten intelijen.<br/>Contoh: "Berapa banyak risiko TINGGI periode ini?"</div>'
+        chat_html += '<div style="color:#6b5b7b; font-size:0.8rem; text-align:center; padding:1rem;">Tanyakan data ancaman langsung.<br/>"Berapa TINGGI hari ini?" · "Rangkum triage terakhir"</div>'
     else:
         for msg in st.session_state["agent_messages"]:
             if msg["role"] == "user":
-                chat_html += f'<div class="agent-msg agent-msg-user"><div class="agent-msg-label">🔍 Operator</div>{msg["content"]}</div>'
+                chat_html += f'<div class="agent-msg agent-msg-user"><div class="agent-msg-label">🔍 Anda</div>{msg["content"]}</div>'
             else:
                 content = md_to_html(msg["content"])
-                chat_html += f'<div class="agent-msg agent-msg-bot"><div class="agent-msg-label">🛡️ Cartensz Agent</div>{content}</div>'
+                chat_html += f'<div class="agent-msg agent-msg-bot"><div class="agent-msg-label">🛡️ Agent</div>{content}</div>'
     chat_html += '</div>'
     chat_html += '<script>var el=document.getElementById("agent-chat-box");if(el)el.scrollTop=el.scrollHeight;</script>'
     st.markdown(chat_html, unsafe_allow_html=True)
 
-    # Menangani kiriman (hindari muat ulang penuh UI)
+    # Chat input — use callback to avoid rerun loop
     def _on_agent_submit():
         msg = st.session_state.get("_agent_input", "").strip()
         if msg:
@@ -390,64 +391,64 @@ with st.sidebar:
             st.session_state["_agent_pending"] = msg
             st.session_state["_agent_input"] = ""
 
-    st.text_input("💬", placeholder="Tulis instruksi...", key="_agent_input",
+    st.text_input("💬", placeholder="Tanya agent...", key="_agent_input",
                   on_change=_on_agent_submit, label_visibility="collapsed")
 
-    # Menerjemahkan pesan dari obrolan menunggu
+    # Process pending agent message (after widget renders)
     if st.session_state.get("_agent_pending"):
         pending = st.session_state.pop("_agent_pending")
-        # Ikon pemuatan kecil di latar belakang
+        # Subtle loading indicator
         status_placeholder = st.empty()
-        status_placeholder.markdown('<div style="color:#7c3aed; font-size:0.75rem;">⏳ memproses jawaban...</div>', unsafe_allow_html=True)
+        status_placeholder.markdown('<div style="color:#7c3aed; font-size:0.75rem;">⏳ Agent sedang berpikir...</div>', unsafe_allow_html=True)
         try:
             from src.agents.intel_agent import run_agent
             reply = run_agent(pending)
             st.session_state["agent_messages"].append({"role": "assistant", "content": reply})
         except Exception as e:
-            st.session_state["agent_messages"].append({"role": "assistant", "content": f"❌ Gangguan fatal: {e}"})
+            st.session_state["agent_messages"].append({"role": "assistant", "content": f"❌ Error: {e}"})
         status_placeholder.empty()
         st.rerun()
 
-    # ─── Indikator Validasi Pelatihan Model Dasar ────────────────────────────────
+    # ─── Model Metrics (Sidebar Bottom) ────────────────────────────────
     st.markdown("<hr style='border-color:#2b1744; margin-top:1.5rem;'>", unsafe_allow_html=True)
     
-    with st.expander("📊 Pelatihan & Model SetFit", expanded=False):
+    with st.expander("📊 Model & Retraining", expanded=False):
         report_path = os.path.join(os.path.dirname(__file__), "..", "notebooks", "reports", "setfit_training_report.json")
         if os.path.exists(report_path):
             with open(report_path) as f: report = json.load(f)
-            st.metric("Skor F1 Bobot", f"{report['results']['weighted_f1']:.4f}")
-            st.metric("Tingkat Kepastian TINGGI", f"{report['results']['tinggi_precision']:.4f}")
-            st.metric("Daya Telan TINGGI", f"{report['results']['tinggi_recall']:.4f}")
+            st.metric("Weighted F1", f"{report['results']['weighted_f1']:.4f}")
+            st.metric("TINGGI Precision", f"{report['results']['tinggi_precision']:.4f}")
+            st.metric("TINGGI Recall", f"{report['results']['tinggi_recall']:.4f}")
         else:
-            st.caption("Buku catatan model masih kosong.")
+            st.caption("Report pelatihan belum tersedia.")
         
         st.markdown("<hr style='border-color:#2b1744; margin:0.5rem 0;'>", unsafe_allow_html=True)
         
-        # Penanda jumlah bantuan manual pengawas
+        # Feedback counter
         try:
             from src.db import get_connection as _gc
             _cdb = _gc()
             fb_count = _cdb.execute("SELECT COUNT(*) FROM feedback_logs").fetchone()[0]
-            st.caption(f"💬 Catatan Revisi Aktif: **{fb_count}** · Ketentuan Retrain: **50**")
+            st.caption(f"💬 Feedback terkumpul: **{fb_count}** · Threshold: **50**")
             can_retrain = fb_count >= 50
         except Exception:
-            st.caption("💬 Database DuckDB luring terkunci.")
+            st.caption("💬 Feedback: DuckDB belum aktif.")
             can_retrain = False
         
-        st.button("🔄 Eksekusi Ulang Model Prediktor", disabled=not can_retrain, 
-                   help="Tombol dipicu selepas terkumpul 50 perbaikan keputusan manual.", use_container_width=True)
+        st.button("🔄 Latih Ulang Model", disabled=not can_retrain, 
+                   help="Akan aktif setelah 50+ feedback terkumpul.", use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════════
-# TAMPILAN RUANG KERJA UTAMA
+# MAIN CONTENT
 # ═══════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class="main-header">
-    <h1>🛡️ Proyek Intelijen Komando Cartensz</h1>
-    <p style="margin:0; color:#e9d5ff; font-family:JetBrains Mono;">Pemantauan Serangan Naratif Taktis</p>
+    <h1>🛡️ Project Cartensz</h1>
+    <p style="margin:0; color:#e9d5ff; font-family:JetBrains Mono;">Threat Intelligence Platform</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ─── Perhitungan Angka Pemantauan Standar ──────────────────────────────────────────────────────
+# ─── Top Metrics ──────────────────────────────────────────────────────
 try:
     from src.db import get_connection
     conn = get_connection()
@@ -474,25 +475,25 @@ except Exception:
     today_stats = pd.DataFrame()
     all_time_stats = pd.DataFrame()
 
-# Catatan Hari Ini
+# Today's counts
 total_today = today_stats['cnt'].sum() if not today_stats.empty else 0
 tinggi_today = today_stats[today_stats['predicted_label'] == 'TINGGI']['cnt'].sum() if not today_stats.empty else 0
 waspada_today = today_stats[today_stats['predicted_label'] == 'WASPADA']['cnt'].sum() if not today_stats.empty else 0
 aman_today = today_stats[today_stats['predicted_label'] == 'AMAN']['cnt'].sum() if not today_stats.empty else 0
 
-# Koleksi Historis Terangkum Total
+# All-time counts
 total_all = all_time_stats['cnt'].sum() if not all_time_stats.empty else 0
 tinggi_all = all_time_stats[all_time_stats['predicted_label'] == 'TINGGI']['cnt'].sum() if not all_time_stats.empty else 0
 waspada_all = all_time_stats[all_time_stats['predicted_label'] == 'WASPADA']['cnt'].sum() if not all_time_stats.empty else 0
 aman_all = all_time_stats[all_time_stats['predicted_label'] == 'AMAN']['cnt'].sum() if not all_time_stats.empty else 0
 
 col1, col2, col3, col4 = st.columns(4)
-with col1: st.markdown(f'<div class="metric-card"><h3>{total_today}</h3><p>Temuan Terakhir</p><span style="color:#a78bfa; font-size:0.7rem;">{total_all} semua waktu</span></div>', unsafe_allow_html=True)
-with col2: st.markdown(f'<div class="metric-card"><h3 class="label-tinggi">{tinggi_today}</h3><p>🔴 TINGGI</p><span style="color:#a78bfa; font-size:0.7rem;">{tinggi_all} semua waktu</span></div>', unsafe_allow_html=True)
-with col3: st.markdown(f'<div class="metric-card"><h3 class="label-waspada">{waspada_today}</h3><p>🟡 WASPADA</p><span style="color:#a78bfa; font-size:0.7rem;">{waspada_all} semua waktu</span></div>', unsafe_allow_html=True)
-with col4: st.markdown(f'<div class="metric-card"><h3 class="label-aman">{aman_today}</h3><p>🟢 AMAN</p><span style="color:#a78bfa; font-size:0.7rem;">{aman_all} semua waktu</span></div>', unsafe_allow_html=True)
+with col1: st.markdown(f'<div class="metric-card"><h3>{total_today}</h3><p>Hari Ini</p><span style="color:#a78bfa; font-size:0.7rem;">{total_all} total</span></div>', unsafe_allow_html=True)
+with col2: st.markdown(f'<div class="metric-card"><h3 class="label-tinggi">{tinggi_today}</h3><p>🔴 TINGGI</p><span style="color:#a78bfa; font-size:0.7rem;">{tinggi_all} total</span></div>', unsafe_allow_html=True)
+with col3: st.markdown(f'<div class="metric-card"><h3 class="label-waspada">{waspada_today}</h3><p>🟡 WASPADA</p><span style="color:#a78bfa; font-size:0.7rem;">{waspada_all} total</span></div>', unsafe_allow_html=True)
+with col4: st.markdown(f'<div class="metric-card"><h3 class="label-aman">{aman_today}</h3><p>🟢 AMAN</p><span style="color:#a78bfa; font-size:0.7rem;">{aman_all} total</span></div>', unsafe_allow_html=True)
 
-# ─── Cuplikan Rangkuman Borongan Triage Baru Masuk ──────────────────
+# ─── Batch Executive Summary (appears after triage) ──────────────────
 if "triage_results" in st.session_state and st.session_state["triage_results"]:
     results = st.session_state["triage_results"]
     n_total = len(results)
@@ -501,50 +502,50 @@ if "triage_results" in st.session_state and st.session_state["triage_results"]:
     n_aman = sum(1 for r in results if r["label"] == "AMAN")
     avg_entropy = sum(r.get("entropy", 0) for r in results) / max(n_total, 1)
     
-    # Pendataan lubang sumber asalnya
+    # Source distribution
     items = st.session_state.get("raw_triage_items", [])
     source_counts = {}
     for it in items:
-        src = it.get("source", "Sarang Gelap") if isinstance(it, dict) else "Sarang Gelap"
+        src = it.get("source", "Unknown") if isinstance(it, dict) else "Unknown"
         source_counts[src] = source_counts.get(src, 0) + 1
     top_sources = sorted(source_counts.items(), key=lambda x: x[1], reverse=True)[:3]
     
     summary_parts = [
-        f"Proses Pembedahan **{n_total}** Item Tertunda:",
+        f"Dari **{n_total}** teks yang dianalisis:",
         f"🔴 **{n_tinggi}** TINGGI · 🟡 **{n_waspada}** WASPADA · 🟢 **{n_aman}** AMAN",
-        f"Rerata Keraguan (Entropy): **{avg_entropy:.4f}** · Arus Suplai: {', '.join([f'{s[0]} ({s[1]})' for s in top_sources])}",
+        f"Rata-rata entropy: **{avg_entropy:.4f}** · Sumber utama: {', '.join([f'{s[0]} ({s[1]})' for s in top_sources])}",
     ]
     
     if n_tinggi > 0:
         pct = n_tinggi / n_total * 100
-        summary_parts.append(f"⚠️ Perhatian: **{pct:.1f}%** ancaman tingkat parah terpantau. Segera teliti di kolom bawah dengan Radar.")
+        summary_parts.append(f"⚠️ **{pct:.1f}%** teks terdeteksi memiliki ancaman tinggi. Klik baris di bawah untuk Deep Analysis.")
     
     st.markdown(
         f'<div style="background:#1c0d28; border:1px solid #3b1f5b; border-radius:10px; padding:1rem; margin:1rem 0;">'
-        f'<strong style="color:#d8b4fe;">📋 Hasil Singkat Penyortiran Massal Otomatis</strong><br>'
+        f'<strong style="color:#d8b4fe;">📋 Ringkasan Eksekutif Batch</strong><br>'
         f'<span style="color:#e9d5ff; font-size:0.9rem;">{"<br>".join(summary_parts)}</span>'
         f'</div>', unsafe_allow_html=True
     )
 
-# ─── Ilustrasi Data Grafis ───────────────────────────────────────────────────────────
+# ─── Charts ───────────────────────────────────────────────────────────
 st.markdown("<br>", unsafe_allow_html=True)
 chart_col1, chart_col2 = st.columns(2)
 
 with chart_col1:
-    st.markdown("#### 📈 Intensitas Cuaca Buruk (Jarak 7 Hari)")
+    st.markdown("#### 📈 Tren Ancaman (7 Hari)")
     if not trend_data.empty:
         chart_data = trend_data.pivot(index='dt', columns='predicted_label', values='cnt').fillna(0)
         for c in ['AMAN', 'WASPADA', 'TINGGI']:
             if c not in chart_data.columns: chart_data[c] = 0
         st.area_chart(chart_data[['TINGGI', 'WASPADA', 'AMAN']], height=220, color=["#ef4444", "#f59e0b", "#10b981"])
     else:
-        st.info("Log operasional terpantau kosong.")
+        st.info("Belum ada data historis.")
 
 with chart_col2:
-    st.markdown("#### 🌌 Klasterisasi Peta Semantik Kata (PCA)")
+    st.markdown("#### 🌌 Peta Semantik Ancaman (PCA)")
     if "triage_results" in st.session_state and st.session_state["triage_results"]:
         results = st.session_state["triage_results"]
-        # Pastikan lapisan vektor dimensi sudah dibuat dari core mesin
+        # Check if real embeddings are available
         has_embeddings = any(r.get("embedding") for r in results)
         
         if has_embeddings:
@@ -571,76 +572,76 @@ with chart_col2:
                 tooltip=['Label']
             ).properties(height=220).interactive()
             st.altair_chart(scatter, use_container_width=True)
-            st.caption(f"Pemangkasan vektor dari ukuran 768 lapis dimensi. Varian data terekstrak {sum(pca.explained_variance_ratio_)*100:.1f}%")
-            st.markdown('<p style="color:#a78bfa; font-size:0.75rem; margin-top:0.2rem;">Sumbu dekat menandakan kesamaan narasi. Pemecahan warna mencerminkan daya identifikasi model.</p>', unsafe_allow_html=True)
+            st.caption(f"PCA dari embedding NusaBERT 768d. Variance explained: {sum(pca.explained_variance_ratio_)*100:.1f}%")
+            st.markdown('<p style="color:#a78bfa; font-size:0.75rem; margin-top:0.2rem;">Titik yang berdekatan = teks serupa secara semantik. Klaster warna yang terpisah menunjukkan model berhasil membedakan level ancaman.</p>', unsafe_allow_html=True)
         else:
             import altair as alt
-            # Fallback prosedur rasio darurat (entropi berbanding panjang napas suku kata)
+            # Fallback: use entropy vs text length
             df_pca = pd.DataFrame({
-                'Tingkat Ketidakpastian (Entropi)': [r.get("entropy", 0.1) for r in results],
-                'Batasan Hitung Teks': [len(r.get("text", "")) for r in results],
+                'Entropy': [r.get("entropy", 0.1) for r in results],
+                'Text Length': [len(r.get("text", "")) for r in results],
                 'Label': [r["label"] for r in results]
             })
             color_scale = alt.Scale(domain=['AMAN', 'WASPADA', 'TINGGI'], range=['#10b981', '#f59e0b', '#ef4444'])
             scatter = alt.Chart(df_pca).mark_circle(size=60, opacity=0.7).encode(
-                x=alt.X('Tingkat Ketidakpastian (Entropi):Q'),
-                y=alt.Y('Batasan Hitung Teks:Q'),
+                x=alt.X('Entropy:Q'),
+                y=alt.Y('Text Length:Q'),
                 color=alt.Color('Label:N', scale=color_scale, legend=None),
-                tooltip=['Label', 'Tingkat Ketidakpastian (Entropi)']
+                tooltip=['Label', 'Entropy']
             ).properties(height=220).interactive()
             st.altair_chart(scatter, use_container_width=True)
-            st.caption("⚠️ Operasi Alternatif: Entropi tebakan vs Skala deret pembangun kalimat.")
+            st.caption("⚠️ Fallback: Entropy vs Panjang Teks (embeddings belum tersedia dari API).")
     else:
-        st.info("Ilustrasi peta bintang otomatis terlukis bilamana pengumpulan kilat (Triage) ditarik tuasnya.")
+        st.info("Peta Semantik muncul setelah Triage dijalankan.")
 
 st.markdown("---")
 
 # ═══════════════════════════════════════════════════════════════════════
-# MODAL LAYAR UNTUK SATU TEKS SAJA (Jeda paksa tampilan radar Gemini)
+# SINGLE-TEXT DIALOG (triggered from Manual/Paste or ASR)
 # ═══════════════════════════════════════════════════════════════════════
-@st.dialog("🔍 Lensa Radar Pembesaran Tinggi (LLM Gemini Aktif)", width="large")
+@st.dialog("🔍 Analisis Mendalam (Radar — 1 LLM Call)", width="large")
 def _show_analysis_dialog(text):
-    """Buka wendela pop timbul untuk menjaga UI bersih tak tertindih fokus."""
-    st.info(f"**Objek Telaah:** _{text}_")
-    with st.spinner("🚀 Melibatkan pakar linguistik AI komersil bawaan..."):
+    """Pop-up deep analysis without replacing main content."""
+    st.info(f"**Teks:** _{text}_")
+    with st.spinner("🚀 Memanggil SetFit + Gemini 3 Flash..."):
         try:
             response = requests.post(f"{API_URL}/analyze", json={"text": text}, timeout=60)
             response.raise_for_status()
             brief = response.json().get("brief")
             if brief:
                 render_deep_analysis(brief)
-                # Form validitas prediksi dari analis penjaga
+                # Feedback inside dialog
                 st.markdown("---")
-                st.markdown("### 💬 Intervensi Jajaran Keamanan Atas")
+                st.markdown("### 💬 Koreksi Analis")
                 fb1, fb2 = st.columns(2)
                 with fb1:
-                    corrected = st.selectbox("Label Sebenarnya:", ["(Patokan Sudah Benar)", "AMAN", "WASPADA", "TINGGI"], key="fb_dialog")
+                    corrected = st.selectbox("Label:", ["(Sesuai)", "AMAN", "WASPADA", "TINGGI"], key="fb_dialog")
                 with fb2:
-                    notes = st.text_input("Goresan Tinta Biru:", key="notes_dialog")
-                if st.button("Kunci ke Laci Server", key="save_dialog"):
-                    if corrected != "(Patokan Sudah Benar)":
+                    notes = st.text_input("Catatan:", key="notes_dialog")
+                if st.button("Simpan", key="save_dialog"):
+                    if corrected != "(Sesuai)":
                         th = hashlib.sha256(text.encode()).hexdigest()[:16]
                         requests.post(f"{API_URL}/feedback", json={
                             "text_hash": th, "original_label": brief["classification"]["label"],
                             "corrected_label": corrected, "notes": notes
                         })
-                        st.success("Terdokumentasi tanpa cacat!")
+                        st.success("Tersimpan!")
         except Exception as e:
-            st.error(f"Mesin tercekik nafasnya: {e}")
+            st.error(f"Gagal: {e}")
 
-# Pemanggil jendela dialog otomatis jika slot teks dipicu
+# Trigger dialog if there's a pending single text
 if st.session_state.get("_dialog_text"):
     text_for_dialog = st.session_state.pop("_dialog_text")
     _show_analysis_dialog(text_for_dialog)
 
 # ═══════════════════════════════════════════════════════════════════════
-# LEMARI ARSIP (Laci Susunan Tabel) The Sweep Array
+# TRIAGE TABLE (multi-text batch results)
 # ═══════════════════════════════════════════════════════════════════════
 if "triage_results" in st.session_state and st.session_state["triage_results"]:
-    st.markdown("### 🚦 Dokumen Pasca Sortir Tingkat Cepat")
-    st.caption("Pilih ruas di bawah untuk memasukkan tulisan ke ruang periksa The Radar.")
+    st.markdown("### 🚦 Hasil Triage (The Sweep — 0 LLM)")
+    st.caption("Pilih baris untuk meluncurkan Deep Analysis dengan LLM.")
     
-    hide_aman = st.toggle("👁️ Lipat Kertas Dokumen AMAN", value=True)
+    hide_aman = st.toggle("👁️ Sembunyikan AMAN", value=True)
     
     items = st.session_state.get("raw_triage_items", [])
     
@@ -648,18 +649,18 @@ if "triage_results" in st.session_state and st.session_state["triage_results"]:
     for i, r in enumerate(st.session_state["triage_results"]):
         if hide_aman and r["label"] == "AMAN":
             continue
-        # Ambil indikator tautan sumur
+        # Get source from items if available
         source = items[i]["source"] if i < len(items) else "—"
         url = items[i].get("url", "") if i < len(items) else ""
         sigs = ", ".join([s.get("type", "?") for s in r.get("signal_highlights", [])])
         df_rows.append({
-            "Nomor Laci": i,
-            "Kesimpulan Label": r["label"],
-            "Indeks Rasa Percaya Mesin": r.get("confidence", ""),
-            "Indeks Variasi Kabur": round(r.get("entropy", 0), 4),
-            "Faktor Peringatan Leksikon": sigs if sigs else "—",
-            "Sarang Pembawa Keonaran": source,
-            "Tanggapan Berbisa Terekam": r.get("text", "")[:100] + "..."
+            "ID": i,
+            "Label": r["label"],
+            "Confidence": r.get("confidence", ""),
+            "Entropy": round(r.get("entropy", 0), 4),
+            "Signals": sigs if sigs else "—",
+            "Source": source,
+            "Text": r.get("text", "")[:100] + "..."
         })
     
     df = pd.DataFrame(df_rows)
@@ -674,21 +675,21 @@ if "triage_results" in st.session_state and st.session_state["triage_results"]:
         
         if selected_rows:
             sel_display_idx = selected_rows[0]
-            sel_real_idx = int(df.iloc[sel_display_idx]["Nomor Laci"])
+            sel_real_idx = int(df.iloc[sel_display_idx]["ID"])
             sel_text = st.session_state["triage_results"][sel_real_idx]["text"]
             sel_source = items[sel_real_idx]["source"] if sel_real_idx < len(items) else "—"
             sel_url = items[sel_real_idx].get("url", "") if sel_real_idx < len(items) else ""
             
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("## 🔍 Ruang Detail Panel Radar Tambahan")
+            st.markdown("## 🔍 Radar Panel — Deep Analysis")
             
-            src_display = f"**Telur Cikal Bakal Data:** {sel_source}"
+            src_display = f"**Sumber:** {sel_source}"
             if sel_url:
-                src_display += f" — [Lintas Tautan]({sel_url})"
+                src_display += f" — [Buka link]({sel_url})"
             st.markdown(src_display)
-            st.info(f"**Naskah Sasaran:** _{sel_text}_")
+            st.info(f"**Teks:** _{sel_text}_")
             
-            with st.spinner("🚀 Melakukan sinkronisasi silang akal silikon Gemini..."):
+            with st.spinner("🚀 Memanggil LLM Director (Gemini 3 Flash)..."):
                 try:
                     response = requests.post(f"{API_URL}/analyze", json={"text": sel_text}, timeout=60)
                     response.raise_for_status()
@@ -697,33 +698,33 @@ if "triage_results" in st.session_state and st.session_state["triage_results"]:
                     if brief:
                         render_deep_analysis(brief)
                         
-                        # Kolom penilaian manual susulan
+                        # Feedback
                         st.markdown("---")
-                        st.markdown("### 💬 Intervensi Pengawas")
+                        st.markdown("### 💬 Koreksi Analis")
                         fb1, fb2, fb3 = st.columns([1, 2, 1])
                         with fb1:
-                            corrected = st.selectbox("Timpa Ketetapan Klasifikasi:", ["(Cetak Skor Benar)", "AMAN", "WASPADA", "TINGGI"], key="fb_batch")
+                            corrected = st.selectbox("Label:", ["(Sesuai)", "AMAN", "WASPADA", "TINGGI"], key="fb_batch")
                         with fb2:
-                            notes = st.text_input("Goresan Tinta Evaluasi:", key="notes_batch")
+                            notes = st.text_input("Catatan:", key="notes_batch")
                         with fb3:
                             st.write(""); st.write("")
-                            if st.button("Cap Sah Revisi", key="save_batch"):
-                                if corrected != "(Cetak Skor Benar)":
+                            if st.button("Simpan", key="save_batch"):
+                                if corrected != "(Sesuai)":
                                     th = hashlib.sha256(sel_text.encode()).hexdigest()[:16]
                                     requests.post(f"{API_URL}/feedback", json={
                                         "text_hash": th, "original_label": brief["classification"]["label"],
                                         "corrected_label": corrected, "notes": notes
                                     })
-                                    st.success("Arsip tercetak tanpa cela!")
+                                    st.success("Tersimpan!")
                 except Exception as e:
-                    st.error(f"Gugur berkalang saat membongkar detail LLM: {e}")
+                    st.error(f"Gagal melakukan deep analysis: {e}")
     else:
-        st.info("✨ Sepi, seluruh arsip terpindai berstatus AMAN belaka.")
+        st.info("✨ Semua teks dilabeli AMAN. Matikan filter di atas untuk melihat semua.")
 
-# ─── Gulungan Pita Rekaman Lama Dukdb ─────────────────────────────────
+# ─── Recent Analyses (DuckDB History) ─────────────────────────────────
 if not ("triage_results" in st.session_state and st.session_state["triage_results"]):
     st.markdown("---")
-    st.markdown("### 📜 Memori Tapak Tilas Identifikasi Kemarin")
+    st.markdown("### 📜 Riwayat Analisis Terbaru")
     try:
         from src.db import get_connection as _gc2
         _hist_conn = _gc2()
@@ -738,6 +739,6 @@ if not ("triage_results" in st.session_state and st.session_state["triage_result
         if not history_df.empty:
             st.dataframe(history_df, use_container_width=True, hide_index=True)
         else:
-            st.info("👈 Sorong tumpukan huruf/wacana menuju rongga penyaring sebelah kiri buat permulaan jalan.")
+            st.info("👈 Masukkan data di panel kiri untuk memulai analisis.")
     except Exception:
-        st.info("👈 Tuang muatan huruf dari sisi penangkap kiri untuk dibedah organ dalamnya.")
+        st.info("👈 Masukkan data di panel kiri untuk memulai analisis.")

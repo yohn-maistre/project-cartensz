@@ -1,9 +1,9 @@
 """
-FastAPI REST API untuk Pengklasifikasi Narasi Ancaman GSP.
+FastAPI REST API untuk Pengklasifikasi Ancaman Narasi GSP.
 Titik Akhir (Endpoints):
-  POST /analyze — Analisis tunggal teks → Intelligence Brief
-  POST /batch — Analisis massal kilat → Kumpulan Intelligence Brief
-  GET /health — Pengecekan status layanan
+  POST /analyze — Analisis teks tunggal → Ringkasan Intelijen
+  POST /batch — Analisis massal → Daftar Ringkasan Intelijen
+  GET /health — Tes kebugaran server
 """
 import asyncio
 from fastapi import FastAPI, HTTPException
@@ -15,16 +15,16 @@ from src.models import IntelligenceBrief
 
 app = FastAPI(
     title="GSP Threat Narrative Classifier",
-    description="Sistem analisis narasi ancaman berbasis AI untuk teks berbahasa Indonesia. "
-                "Mengklasifikasikan dokumen ke dalam skala AMAN/WASPADA/TINGGI beserta penjelesannya.",
+    description="Analisis narasi ancaman berbasis AI untuk teks bahasa Indonesia. "
+                "Mengategorikan teks sebagai AMAN/WASPADA/TINGGI dengan kemampuan menjelaskan alasan.",
     version="1.0.0",
 )
 
 
-# --- Skema Penukaran Data (Request/Response) ---
+# --- Skema Permintaan/Tanggapan ---
 
 class AnalyzeRequest(BaseModel):
-    text: str = Field(..., min_length=5, description="Teks berbahasa Indonesia untuk dianalisis")
+    text: str = Field(..., min_length=5, description="Teks Indonesia yang disorot untuk analisis ancaman")
 
 
 class AnalyzeResponse(BaseModel):
@@ -49,7 +49,7 @@ class FeedbackRequest(BaseModel):
     notes: Optional[str] = None
 
 
-# --- Titik Akses Jaringan (Endpoints) ---
+# --- Titik Akhir Komunikasi (Endpoints) ---
 
 @app.get("/health")
 async def health_check():
@@ -58,7 +58,7 @@ async def health_check():
 
 @app.post("/analyze", response_model=AnalyzeResponse)
 async def analyze_text(request: AnalyzeRequest):
-    """Jalankan analisis mendalam pada satu dokumen teks."""
+    """Menganalisis teks tunggal berbahasa Indonesia untuk mendeteksi unsur ancaman."""
     try:
         brief = await run_pipeline(request.text)
         return AnalyzeResponse(success=True, brief=brief)
@@ -68,7 +68,7 @@ async def analyze_text(request: AnalyzeRequest):
 
 @app.post("/batch", response_model=BatchResponse)
 async def batch_analyze(request: BatchRequest):
-    """Lakukan pemindaian multi teks melalui The Sweep (0 LLM call). Super ringan & kilat."""
+    """Memproses banyak teks menggunakan The Sweep (0 biaya pemanggilan LLM). Cepat dan efisien."""
     try:
         results = await batch_classify(request.texts)
         return BatchResponse(success=True, briefs=results)
@@ -79,33 +79,32 @@ from src.db import save_feedback
 
 @app.post("/feedback")
 async def submit_feedback(request: FeedbackRequest):
-    """Beri masukan manual analis intel untuk perbaikan akurasi rute aktif (Active Learning)."""
+    """Menyimpan perbaikan manual analis untuk memperkuat pelabelan aktif."""
     save_feedback(
         text_hash=request.text_hash,
         original_label=request.original_label,
         corrected_label=request.corrected_label,
         notes=request.notes
     )
-    print(f"[Feedback Tersimpan di DuckDB] {request.text_hash}: {request.original_label} -> {request.corrected_label}")
-    return {"success": True, "message": "Koreksi tercatat dalam DuckDB untuk putaran latih ulang berikutnya."}
+    print(f"[Sinkronisasi Umpan Balik DuckDB] {request.text_hash}: {request.original_label} -> {request.corrected_label}")
+    return {"success": True, "message": "Catatan intervensi disimpan ke pangkalan data DuckDB untuk revisi latihan berikutnya."}
 
 
 @app.post("/retrain")
 async def trigger_retraining():
-    """Nyalakan rutinitas pelatihan ulang SetFit memakai dataset terkurasi terbaru."""
+    """Memicu pelatihan ulang model SetFit menggunakan basis data kurasi dan koreksi terbaru."""
     try:
-        # Jalankan di baliknya latar menggunakan thread.
-        # Catatan: idealnya gunakan subprocess atau pelayan eksternal pada skala produksi.
+        # Menjalankan proses di tugas balik layar atau subproses terpisah untuk skala komersial.
         from src.ml.train_setfit import train
         import threading
         
-        # Mulai siklus di urat nadinya sehingga antarmuka tetap menyala (non-blocking)
+        # Mengeksekusi rangkaian pembelajaran berbasis utas supaya API langsung responsif
         t = threading.Thread(target=train)
         t.start()
         
-        return {"success": True, "message": "Prosedur pembelajaran ulang telah beroperasi di balik layar."}
+        return {"success": True, "message": "Proses pelatihan perbaikan berlangsung di latar belakang."}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gagal menginisiasi program latihan: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Gagal melaksanakan pelatihan dasar ulang: {str(e)}")
 
 
 from fastapi import UploadFile, File, Form
@@ -117,16 +116,16 @@ async def transcribe_audio(
     run_analysis: bool = Form(True),
 ):
     """
-    Ekstrak tulisan dari pelaporan oral (audio) memakai Qwen3-ASR-0.6B, 
-    kemudian dapat disusul dengan pelacakan jejak ancaman.
+    Mentranskripsi berkas arsip modul audio menggunakan standar Qwen3-ASR-0.6B, 
+    kemudian dapat meneruskan keluaran teks melintasi rel spesialisasi penangkal ancaman (The Radar).
     
-    Berlaku bagi: wav, mp3, ogg, flac, m4a
+    Format Menerima: wav, mp3, ogg, flac, m4a
     """
     allowed_types = {".wav", ".mp3", ".ogg", ".flac", ".m4a", ".webm"}
     import os
     ext = os.path.splitext(file.filename or "audio.wav")[1].lower()
     if ext not in allowed_types:
-        raise HTTPException(status_code=400, detail=f"Ektensi audio tak dikenal: {ext}. Yg diperbolehkan: {allowed_types}")
+        raise HTTPException(status_code=400, detail=f"Struktur ekstensi audio di luar dukungan: {ext}. Terizinkan hanya: {allowed_types}")
 
     audio_bytes = await file.read()
 
@@ -135,7 +134,7 @@ async def transcribe_audio(
         import tempfile
 
         if run_analysis:
-            # Pindahkan ke ruang sementara untuk ditinjau oleh transcriber utuh
+            # Membuang ke medium memori sesaat (temp) bagi keperluan saluran transcribe_and_analyze
             with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
                 tmp.write(audio_bytes)
                 tmp_path = tmp.name
@@ -158,7 +157,7 @@ async def transcribe_audio(
                 "error": None,
             }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unit ASR tidak merespons: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Sistem ASR gagal operasi: {str(e)}")
 
 
 if __name__ == "__main__":
