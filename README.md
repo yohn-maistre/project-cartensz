@@ -21,3 +21,4 @@ cp .env.example .env
 - **Brief Writer Agent**: Agen hulu yang mengintegrasikan klasifikasi LLM dengan hasil machine learning kecil lokal menjadi laporan singkat intelijen (Intelligence Briefing) berstruktur yang aman.
 - **Orkestrator ADK**: Menyatukan semua tahapan agen di atas menjadi sarana alur kerja hulu-ke-hilir untuk analisis intelijen dengan dua mode kecepatan.
 - **SetFit NusaBERT**: Algoritma model lokal yang bisa dilatih ulang dari basis model bahasa Indonesia yang mumpuni. Terdapat program pensintesis data buatan (Gemini 3 Flash) untuk mengatasi kelas TINGGI yang sangat sedikit muncul di alam liar.
+- **API Backend FastAPI**: Menyediakan titik akhir antarmuka aplikasi terprogram (API) untuk dapat dihubungkan ke dasbor operasi maupun layanan pelaporan (*collector*).
