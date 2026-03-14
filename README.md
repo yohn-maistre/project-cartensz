@@ -23,3 +23,4 @@ cp .env.example .env
 - **SetFit NusaBERT**: Algoritma model lokal yang bisa dilatih ulang dari basis model bahasa Indonesia yang mumpuni. Terdapat program pensintesis data buatan (Gemini 3 Flash) untuk mengatasi kelas TINGGI yang sangat sedikit muncul di alam liar.
 - **API Backend FastAPI**: Menyediakan titik akhir antarmuka aplikasi terprogram (API) untuk dapat dihubungkan ke dasbor operasi maupun layanan pelaporan (*collector*).
 - **Streamlit Command Center**: Antarmuka visual yang menampilkan data analisis ke dalam struktur ringkasan terperinci (*Intelligence Brief*), pemetaan visual (*PCA*), asisten *chat* fungsional (ADK Agent), dan formulir pelaporan cepat atas anomali identifikasi.
+- **Docker Ready**: Proyek ini dapat langsung diluncurkan menggunakan Docker Compose untuk menyatukan API Backend dan UI Dasbor di bawah satu atap server.
