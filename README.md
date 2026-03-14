@@ -22,3 +22,4 @@ cp .env.example .env
 - **Orkestrator ADK**: Menyatukan semua tahapan agen di atas menjadi sarana alur kerja hulu-ke-hilir untuk analisis intelijen dengan dua mode kecepatan.
 - **SetFit NusaBERT**: Algoritma model lokal yang bisa dilatih ulang dari basis model bahasa Indonesia yang mumpuni. Terdapat program pensintesis data buatan (Gemini 3 Flash) untuk mengatasi kelas TINGGI yang sangat sedikit muncul di alam liar.
 - **API Backend FastAPI**: Menyediakan titik akhir antarmuka aplikasi terprogram (API) untuk dapat dihubungkan ke dasbor operasi maupun layanan pelaporan (*collector*).
+- **Streamlit Command Center**: Antarmuka visual yang menampilkan data analisis ke dalam struktur ringkasan terperinci (*Intelligence Brief*), pemetaan visual (*PCA*), asisten *chat* fungsional (ADK Agent), dan formulir pelaporan cepat atas anomali identifikasi.
