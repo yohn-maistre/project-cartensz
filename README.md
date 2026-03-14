@@ -17,3 +17,4 @@ cp .env.example .env
 - **Kamus Eufemisme**: Dilengkapi dengan kamus kode, bahasa gaul ancaman, dan pola kalimat yang menunjukkan urgensi untuk mendeteksi ancaman terselubung.
 - **Ekstraktor Sinyal**: Mengekstrak sinyal ancaman menggunakan pola RegEx murni tanpa LLM untuk menjamin kecepatan proses.
 - **Klien LLM Pintar**: Menggunakan `litellm` sebagai jembatan ke model bahasa (Gemini/Ollama) dengan fitur rotasi API Key otomatis jika terkena *rate-limit* dan penyimpanan (*caching*) respons bawaan agar lebih hemat kuota.
+- **Pencatat Analisis DuckDB**: Menyimpan sistem umpan balik pengguna dan riwayat identifikasi ke dalam sistem basis data analitik supersingkat (DuckDB).
