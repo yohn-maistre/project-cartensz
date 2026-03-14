@@ -36,12 +36,13 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ─── kustomisasi css ───────────────────────────────────────────────────────
+# ─── kustomisasi css (Pemolesan Mode Gelap Kontras Tinggi) ───────────────────
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap');
     
-    .stApp { background-color: #0b0510 !important; color: #f3e8ff; font-family: 'Inter', sans-serif; }
+    .stApp { background-color: #0d0614 !important; color: #f3e8ff; font-family: 'Inter', sans-serif; }
+
     [data-testid="stSidebar"] { background-color: #13091c !important; border-right: 1px solid #2b1744; }
     [data-testid="stSidebar"] * { color: #d8b4fe; }
     [data-testid="stSidebar"] h1, h2, h3 { color: #faf5ff; }
