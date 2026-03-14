@@ -24,3 +24,5 @@ cp .env.example .env
 - **API Backend FastAPI**: Menyediakan titik akhir antarmuka aplikasi terprogram (API) untuk dapat dihubungkan ke dasbor operasi maupun layanan pelaporan (*collector*).
 - **Streamlit Command Center**: Antarmuka visual yang menampilkan data analisis ke dalam struktur ringkasan terperinci (*Intelligence Brief*), pemetaan visual (*PCA*), asisten *chat* fungsional (ADK Agent), dan formulir pelaporan cepat atas anomali identifikasi.
 - **Docker Ready**: Proyek ini dapat langsung diluncurkan menggunakan Docker Compose untuk menyatukan API Backend dan UI Dasbor di bawah satu atap server.
+- **Pengepul OSINT**: Modul penarik wacana publik (scrapers) secara mandiri dari Reddit, saluran berita RSS, dan kolom komentar video YouTube. Teks hasil operasi pengerukan dikemas dan dikirim ke sistem secara reguler.
+
