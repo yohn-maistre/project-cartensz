@@ -43,7 +43,8 @@ st.markdown("""
     
     .stApp { background-color: #0d0614 !important; color: #f3e8ff; font-family: 'Inter', sans-serif; }
 
-    [data-testid="stSidebar"] { background-color: #13091c !important; border-right: 1px solid #2b1744; }
+    /* Perbaikan visibilitas bilah samping (Sidebar UI Polish) */
+    [data-testid="stSidebar"] { background-color: #13091c !important; border-right: 1px solid #3b1f5b; padding-top: 10px; }
     [data-testid="stSidebar"] * { color: #d8b4fe; }
     [data-testid="stSidebar"] h1, h2, h3 { color: #faf5ff; }
     .stTextArea textarea, .stTextInput input { background-color: #1c0d28 !important; color: #f3e8ff !important; border: 1px solid #3b1f5b !important; border-radius: 8px; }
