@@ -19,3 +19,4 @@ cp .env.example .env
 - **Klien LLM Pintar**: Menggunakan `litellm` sebagai jembatan ke model bahasa (Gemini/Ollama) dengan fitur rotasi API Key otomatis jika terkena *rate-limit* dan penyimpanan (*caching*) respons bawaan agar lebih hemat kuota.
 - **Pencatat Analisis DuckDB**: Menyimpan sistem umpan balik pengguna dan riwayat identifikasi ke dalam sistem basis data analitik supersingkat (DuckDB).
 - **Brief Writer Agent**: Agen hulu yang mengintegrasikan klasifikasi LLM dengan hasil machine learning kecil lokal menjadi laporan singkat intelijen (Intelligence Briefing) berstruktur yang aman.
+- **Orkestrator ADK**: Menyatukan semua tahapan agen di atas menjadi sarana alur kerja hulu-ke-hilir untuk analisis intelijen dengan dua mode kecepatan.
