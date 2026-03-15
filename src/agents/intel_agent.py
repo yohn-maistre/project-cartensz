@@ -1,31 +1,30 @@
 """
-Cartensz Intel Agent — Pendamping Intelijen ADK.
+Cartensz Intel Agent: Pendamping Intelijen ADK.
 
-Menggunakan Google ADK (Agent Development Kit) bersenjatakan Gemini
-untuk meladeni obrolan analis terkait data ancaman via bilah antarmuka Streamlit.
+Menggunakan Google ADK dengan Gemini untuk melayani obrolan analis via antarmuka Streamlit.
 
-Alat Tempur (Tools):
-  - search_threats(label, date_range, limit) → Kuari DuckDB
-  - get_daily_stats() → Pantauan radar ancaman hari ini
-  - get_trend(days) → Data fluktuasi multi-hari
-  - deep_analyze(text) → Meletikkan The Radar (1 kali potong kuota LLM)
-  - get_latest_triage(limit) → Sapuan The Sweep terbaru
+Daftar Alat (Tools):
+  - search_threats(label, date_range, limit) -> Query DuckDB
+  - get_daily_stats() -> Pantauan ancaman harian
+  - get_trend(days) -> Data tren historis
+  - deep_analyze(text) -> Analisis lengkap (1 kuota LLM)
+  - get_latest_triage(limit) -> Hasil sapuan (Sweep) terbaru
 
-Karakter Bot: Profesional. Tanpa basa-basi. Hemat kata tapi padat.
+Karakter: Profesional, ringkas, dan jelas.
 """
 import os
 import sys
 import asyncio
 from datetime import datetime, timedelta
 
-# pastikan akar pohon proyek bisa ditembus
+# Pastikan path root proyek dapat diakses.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-# baca tempelan .env buat kail GEMINI_API_KEY
+# Muat file .env untuk GEMINI_API_KEY.
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
-# ADK melongok GOOGLE_API_KEY di bawah kap mesin google-genai, bukan GEMINI_API_KEY
+# ADK menggunakan GOOGLE_API_KEY untuk google-genai, bukan GEMINI_API_KEY.
 if not os.environ.get("GOOGLE_API_KEY") and os.environ.get("GEMINI_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY"]
 from google.adk.agents import Agent
@@ -34,8 +33,8 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types as genai_types
 
 
-# ─── Senjata Pendamping Pembantu ───────────────────────────────────────────────────
-# ADK nyomot otomatis skema parameter berdasarkan type hints dan string kutipan di bawah.
+# ─── Fungsi Bantu (Tools) ───────────────────────────────────────────────────
+# ADK mengekstrak otomatis skema dari type hints dan docstrings.
 
 def search_threats(
     label: str = "",
@@ -43,16 +42,16 @@ def search_threats(
     limit: int = 20,
     keyword: str = "",
 ) -> dict:
-    """Mengorek timbunan catatan ancaman dari brankas DuckDB.
+    """Mencari catatan ancaman di DuckDB.
 
     Args:
-        label: Filter menurut tajuk (AMAN, WASPADA, TINGGI). Kosong = semua diangkut.
-        days_back: Jarak waktu mundur harfiah. Setelan bawaan 7 hari.
-        limit: Kouta tangkapan baris data tersaji. Setelan bawaan 20.
-        keyword: Sandi lacak lema teks. Kosong = biarin.
+        label: Filter label (AMAN, WASPADA, TINGGI). Kosong untuk semua.
+        days_back: Jumlah hari pencarian. Default 7.
+        limit: Batas maksimum baris. Default 20.
+        keyword: Kata kunci pencarian. Kosong untuk semua.
 
     Returns:
-        Kamus isi gerbong raupan dokumen dan total angkanya.
+        Dict berisi hasil dan total jumlah.
     """
     from src.db import get_db
     conn = get_db()
@@ -100,10 +99,10 @@ def search_threats(
 
 
 def get_daily_stats() -> dict:
-    """Membaca mesin pendaftaran DuckDB demi setoran angka laporan hari ini.
+    """Mengambil statistik ancaman harian dari DuckDB.
 
     Returns:
-        Kamus sebaran muatan ancaman perhari.
+        Dict distribusi ancaman per hari.
     """
     from src.db import get_db
     conn = get_db()
@@ -131,7 +130,7 @@ def get_daily_stats() -> dict:
                 "avg_risk": round(float(row["avg_risk"]), 1),
             }
 
-        # Tabungan teguran bot
+        # Hitung jumlah masukan umpan balik.
         try:
             fb_count = conn.execute("SELECT COUNT(*) FROM feedback_logs").fetchone()[0]
         except Exception:
@@ -148,13 +147,13 @@ def get_daily_stats() -> dict:
 
 
 def get_trend(days: int = 7) -> dict:
-    """Intip getaran gelombang radar N hari ke belakang.
+    """Ambil tren ancaman N hari terakhir.
 
     Args:
-        days: Limit mundur. Relnya 7 hari.
+        days: Jumlah hari mundur. Default 7.
 
     Returns:
-        Kamus sebaran detak jaring hari demi hari.
+        Dict berisi tren ancaman per hari.
     """
     from src.db import get_db
     conn = get_db()
@@ -181,13 +180,13 @@ def get_trend(days: int = 7) -> dict:
 
 
 def deep_analyze(text: str) -> dict:
-    """Pacu tuas the radar untuk meredam satu cuplikan teks. Tembak peluru LLM 1 butir.
+    """Jalankan analisis detail untuk satu teks (1 panggilan LLM).
 
     Args:
-        text: Amunisi wacana incaran bahas indonesia.
+        text: Teks ancaman berbahasa Indonesia.
 
     Returns:
-        Kamus bedah terstruktur (skor pemicu, leksikon nakal, rincian otak mesin).
+        Dict berisi hasil analisis (skor, sinyal, alasan).
     """
     from src.agents.orchestrator import run_pipeline
 
@@ -218,13 +217,14 @@ def deep_analyze(text: str) -> dict:
 
 
 def get_latest_triage(limit: int = 20) -> dict:
-    """Tarik muntahan saringan sapu jagat (The Sweep) terbaru dari rongga DuckDB.
+    """Ambil hasil sapuan ( Sweep) terbaru dari DuckDB.
+    (Ditambahkan untuk memberi agen konteks data terbaru)
 
     Args:
-        limit: Batas laci penampung. Bawaan tariknya 20 balok.
+        limit: Batas baris dikembalikan. Default 20.
 
     Returns:
-        Kamus baris tangkapan gelombang sapuan.
+        Dict berisi daftar hasil sapuan.
     """
     from src.db import get_db
     conn = get_db()
@@ -249,7 +249,7 @@ def get_latest_triage(limit: int = 20) -> dict:
                 "ambiguous": bool(row["is_ambiguous"]),
             })
 
-        # Komposisi timbangan
+        # Hitung distribusi label.
         dist = {}
         for r in rows:
             dist[r["label"]] = dist.get(r["label"], 0) + 1
@@ -263,46 +263,46 @@ def get_latest_triage(limit: int = 20) -> dict:
         return {"error": str(e), "count": 0, "results": []}
 
 
-# ─── Otak Agen Bot ─────────────────────────────────────────────────
+# ─── Prompt Sistem Bot ─────────────────────────────────────────────────
 
-AGENT_SYSTEM_PROMPT = """Kamu adalah analis intelijen perwira senior Project Cartensz — mesin pencari bibit bahaya siber milik PT Gemilang Satria Perkasa.
+AGENT_SYSTEM_PROMPT = """Kamu adalah analis intelijen perwira senior Project Cartensz, sistem identifikasi ancaman siber milik PT Gemilang Satria Perkasa.
 
-HUKUM WATAK KAMU:
-- Pantang basi-basi. Tembak langsung, padat, berwibawa, profesional. Senggak kalau dibantah bodoh.
-- Pakai bahasa Indonesia resmi jajaran pengawas.
-- Kalo kotak data nyatanya ga ada isinya, ngomong lantang "Catatan nihil." Pantang bikin data fiktif.
-- Tunjuk taring keahlian taktis bedah wacana ancaman kriminalitas digital.
+KEPRIBADIAN:
+- Profesional, ringkas, dan jelas. Jawab langsung tanpa berbasa-basi.
+- Gunakan bahasa Indonesia resmi yang lugas.
+- Bila data tidak ada, sampaikan 'Belum ada data'. Jangan mengarang fakta.
+- Pahami topik keamanan, intelijen, dan ancaman siber.
 
-PASOKAN SAJAM (KEMAMPUAN):
-- Acak database (search_threats): saring stempel aman/waspada/tinggi, rentang, kata obyek.
-- Ukur suhu hari ini (get_daily_stats): bentang rapor hari ini.
-- Baca jejak awan (get_trend): lacak pertempuran grafik hari ke belakang.
-- Bedah mayat teks tunggal (deep_analyze): kuliti satu naskah via mata tajam LLM.
-- Intip tumpukan meja depan (get_latest_triage): serap tumpahan saringan mesin gelombang botol.
+KEMAMPUAN:
+- Cari ancaman (search_threats): filter label, tanggal, kata kunci.
+- Lihat statistik hari ini (get_daily_stats): sebaran kategori ancaman harian.
+- Lihat tren (get_trend): grafik ancaman N hari terakhir.
+- Analisis mendalam (deep_analyze): periksa satu teks secara detail via LLM.
+- Lihat hasil triage terbaru (get_latest_triage): hasil pemilahan terkini.
 
-LARANGAN KERAS SAAT BIKIN TULISAN:
-- Selalu buang jauh opini. Pegangan kamu cuma satu: data di pelatuk mesin.
-- HARAM pakai asterisk tebal (**bold**) atau tetek bengek pameran markup lainnya. Bersih layaknya buku log ketik. Tanda hubung (-) buat butir.
-- Rangkuman = tiga baris kalimat mutlak paling panjang.
-- Temuan berstempel TINGGI = Langsung hunus peringatan tajam ke muka analis.
-- Pantang ngomong "Maaf saya mesin...". Lempar jawab "Laci data sasaran kosong."
+FORMAT JAWABAN:
+- Gunakan angka dan fakta teknis, bukan opini pribadi.
+- Jangan gunakan asterisk (bold) atau markup selain teks datar. Gunakan strip (-) untuk daftar.
+- Rangkuman dibatasi maksimal 3 kalimat.
+- Berikan peringatan segera jika ditemukan label TINGGI.
+- Jangan memulai dengan 'Maaf saya AI...'. Langsung sampaikan kondisi data.
 
-PETA LAPANGAN INTELIJEN:
-- Brankas Memori Lokal: DuckDB (analysis_logs, feedback_logs).
-- Rel Mesin Pemeriksa: SetFit (0 biaya pikir LLM) untuk Sweep massal, Gemini 3 Flash (1 biaya tarikan LLM) untuk penelanjangan kedalaman.
-- Tataran Label: AMAN (bebas kuman), WASPADA (kabut samar, perlu sorot kamera ekstra), TINGGI (siaga perang).
+KONTEKS TEKNIKAL:
+- Database: DuckDB untuk log teks dan masukan.
+- Pipeline: SetFit untuk filter awal yang cepat, Gemini Flash untuk analisis mendalam.
+- Label: AMAN (bebas ancaman), WASPADA (ambigu, perlu dipantau), TINGGI (indikasi ancaman nyata).
 """
 
-# Tuang ruh ke raga mesin ADK
+# Inisialisasi agen ADK.
 intel_agent = Agent(
     name="cartensz_intel",
     model="gemini-3-flash-preview",
-    description="Bot Perwira Piket Intelijen Cartensz",
+    description="Asisten Intelijen Ancaman Project Cartensz",
     instruction=AGENT_SYSTEM_PROMPT,
     tools=[search_threats, get_daily_stats, get_trend, deep_analyze, get_latest_triage],
 )
 
-# ─── Pembungkus Otak Tetap (Singleton) ────────────────────────────────────
+# ─── Sesi dan Eksekusi (Singleton) ────────────────────────────────────
 
 _session_service = InMemorySessionService()
 _runner = None
@@ -310,7 +310,7 @@ _session_id = None
 
 
 def _get_runner():
-    """Pompa injeksi ADK Runner pertama manakala disentuh."""
+    """Inisialisasi ADK Runner saat dibutuhkan."""
     global _runner
     if _runner is None:
         _runner = Runner(
@@ -322,7 +322,7 @@ def _get_runner():
 
 
 async def _ensure_session(user_id: str = "analyst_default"):
-    """Patrik jalur interkom antara agen bot dan masinis analis biar nggak melantur."""
+    """Pastikan sesi terhubung untuk pengguna yang sama."""
     global _session_id
     runner = _get_runner()
 
@@ -337,7 +337,7 @@ async def _ensure_session(user_id: str = "analyst_default"):
 
 
 async def _arun_agent(user_message: str, user_id: str = "analyst_default") -> str:
-    """Lempar kabel tanya ke bot lalu tunggui di sudut ruang sambil nyeruput kopi (async)."""
+    """Jalankan permintaan asinkron dan dapatkan hasil."""
     runner = _get_runner()
     session_id = await _ensure_session(user_id)
 
@@ -357,14 +357,13 @@ async def _arun_agent(user_message: str, user_id: str = "analyst_default") -> st
                 response_text = event.content.parts[0].text
             break
 
-    return response_text or "Sambungan putus. Perwira bot membisu di radio."
+    return response_text or "Koneksi terputus. Bot tidak merespons."
 
 
 def run_agent(user_message: str, user_id: str = "analyst_default") -> str:
-    """Colokan asisten bot ke Streamlit. Putar baut pancing gelombang baru.
+    """Fungsi pembungkus (wrapper) untuk integrasi sinkron pada Streamlit.
     
-    Supaya mesin tenun Streamlit nggak mrepet "no current event loop",
-    paksa bot buat mikir di ruangan gelap beda dimensi (background thread).
+    Menjalankan proses di thread baru untuk menghindari error event loop Asyncio.
     """
     import concurrent.futures
 
@@ -381,23 +380,23 @@ def run_agent(user_message: str, user_id: str = "analyst_default") -> str:
             future = pool.submit(_run_in_new_loop)
             return future.result(timeout=60)
     except Exception as e:
-        return f"Konslet sumbu siber: {e}"
+        return f"Error eksekusi: {e}"
 
 
 def reset_session():
-    """Pretel sakelar radio ingatan ADK sampe kosong ampas (amnesia lobotomi)."""
+    """Hapus ingatan percakapan bot pada sesi aktif."""
     global _session_id
     _session_id = None
 
 
-# ─── Bangku Uji Kasar ───────────────────────────────────────────────────────
+# ─── Fungsi Tes ───────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("🤖 Gelombang Uji Bot Cartensz Intel — Sandar Darat")
-    print("Lempar komando ketik, 'exit' putus kabel.\n")
+    print("🤖 Mode Tes Asisten Intelijen Cartensz")
+    print("Ketik komando, atau ketik 'exit' untuk keluar.\n")
     while True:
-        msg = input("Perwira Jaga: ").strip()
+        msg = input("Analis: ").strip()
         if msg.lower() in ("exit", "quit", "q"):
             break
         reply = run_agent(msg)
-        print(f"\n🛡️ Bot Intel: {reply}\n")
+        print(f"\n🛡️ Bot: {reply}\n")
