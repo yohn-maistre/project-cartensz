@@ -249,7 +249,7 @@ def scrape_rss(target: dict, debug: bool = False) -> list[dict]:
         return texts
 
     except Exception as e:
-        logger.error(f"  ❌ Kandas sedot saluran RSS {name}: {e}")
+        logger.error(f"  ❌ Kandas sedot saluran RSS {name}: {e}. Melompat ke saluran berikutnya.")
         return []
 
 
@@ -442,7 +442,7 @@ def main():
                 logger.warning(f"   → {t['text'][:100]}...")
 
     except Exception as e:
-        logger.error(f"Ditolak mentah-mentah gerbang meja Triage API: {e}")
+        logger.error(f"Ditolak mentah-mentah gerbang meja Triage API: {e}. (Menunggu retry otomatis di siklus berikutnya)")
 
 
 if __name__ == "__main__":
