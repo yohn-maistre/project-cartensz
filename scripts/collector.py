@@ -52,7 +52,8 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 }
 
-# sasaran reddit — jalur tikus old.reddit.com (jarang kena blok) dengan jaring json + rss cadangan
+# sasaran reddit — jalur tikus old.reddit.com (jarang kena blok) dengan jaring json + rss cadangan ganda
+# cadangan ganda menjamin sistem kebal dari blokir Cloudflare
 REDDIT_TARGETS = [
     {
         "name": "r/indonesia (new)",
