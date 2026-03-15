@@ -339,6 +339,7 @@ with st.sidebar:
                     st.error(f"Pelayan api tumbang: {e}")
 
     # ─── asisten adk pendamping ruang siber ──────────────────────────────────
+    # chat UI integration with session memory
     st.markdown("<hr style='border-color:#2b1744; margin-top:1rem;'>", unsafe_allow_html=True)
     st.markdown("### 🤖 Pendamping Digital (ADK Agent)")
 
