@@ -1,26 +1,26 @@
 """
-Agen Intel Cartensz — Asisten Intelijen Ancaman Berbasis Obrolan (ADK).
+Cartensz Intel Agent — Asisten Intelijen Ancaman Berbasis Obrolan (ADK).
 
-Memanfaatkan perangkat ADK (Agent Development Kit) dari Google bersama kapabilitas pemanggilan fungsi Gemini 
-agar analis mampu mempertajam penggalian data ancaman secara interaktif via panel samping Streamlit.
+Menggunakan Google ADK (Agent Development Kit) dengan function-calling Gemini
+agar analis dapat mengecek data ancaman melalui obrolan di sidebar Streamlit.
 
 Alat:
-  - search_threats(label, date_range, limit) → Kuari DuckDB
-  - get_daily_stats() → Pemetaan distribusi ancaman harian
-  - get_trend(days) → Laporan tren data multihari
-  - deep_analyze(text) → Melancarkan saluran lengkap Radar (1 panggian LLM)
+  - search_threats(label, date_range, limit) → Kueri DuckDB
+  - get_daily_stats() → distribusi ancaman hari ini
+  - get_trend(days) → data tren ancaman
+  - deep_analyze(text) → jalankan pipeline Radar penuh (1 call LLM)
 
-Penokohan: Analis intelijen tulen anti-basa-basi. Tepat, padat, dan representatif menggunakan kaidah bahasa Indonesia.
+Kepribadian: Analis intelijen profesional anti-basa-basi. Ringkas, bahasa Indonesia lugas.
 """
 import os
 import sys
 import asyncio
 from datetime import datetime, timedelta
 
-# Pastikan hierarki root proyek terbaca
+# Pastikan root proyek dapat diimpor
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-# Memuat .env untuk kebutuhan GEMINI_API_KEY
+# Memuat .env untuk GEMINI_API_KEY
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
@@ -33,8 +33,8 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types as genai_types
 
 
-# ─── Kapabilitas Eksekusi Alat ───────────────────────────────────────────────────
-# Skema ADK diambil rinciannya langsung dari suguhan instruksi dasar tipe data dan panduan parameter (docstrings)
+# ─── Fungsi Perangkat ───────────────────────────────────────────────────
+# Skema ADK diambil otomatis dari tipe data dan docstrings.
 
 def search_threats(
     label: str = "",
@@ -51,10 +51,11 @@ def search_threats(
         keyword: Kata kunci untuk pencarian dalam teks. Kosongkan untuk semua.
 
     Returns:
-        Kumpulan rekam jejak ancaman dan angka totalannya.
+        Dictionary berisi daftar hasil threat dan jumlah total.
     """
-    from src.db import get_db
-    conn = get_db()
+    import duckdb
+    from src.db import get_connection
+    db_path = get_connection()
 
     conditions = ["1=1"]
     params = []
@@ -81,19 +82,20 @@ def search_threats(
     """
 
     try:
-        result = conn.execute(query, params).fetchdf()
-        rows = []
-        for _, row in result.iterrows():
-            rows.append({
-                "timestamp": str(row["timestamp"]),
-                "text": str(row["input_text"])[:150],
-                "label": str(row["predicted_label"]),
-                "risk_score": int(row["risk_score"]) if row["risk_score"] else 0,
-                "confidence": str(row["confidence"]),
-                "entropy": round(float(row["entropy"]), 4) if row["entropy"] else 0,
-                "mode": str(row["pipeline_mode"]),
-            })
-        return {"count": len(rows), "results": rows}
+        with duckdb.connect(db_path, read_only=True) as conn:
+            result = conn.execute(query, params).fetchdf()
+            rows = []
+            for _, row in result.iterrows():
+                rows.append({
+                    "timestamp": str(row["timestamp"]),
+                    "text": str(row["input_text"])[:150],
+                    "label": str(row["predicted_label"]),
+                    "risk_score": int(row["risk_score"]) if row["risk_score"] else 0,
+                    "confidence": str(row["confidence"]),
+                    "entropy": round(float(row["entropy"]), 4) if row["entropy"] else 0,
+                    "mode": str(row["pipeline_mode"]),
+                })
+            return {"count": len(rows), "results": rows}
     except Exception as e:
         return {"error": str(e), "count": 0, "results": []}
 
@@ -102,25 +104,33 @@ def get_daily_stats() -> dict:
     """Ambil statistik ancaman hari ini dari DuckDB.
 
     Returns:
-        Sekumpulan angka distribusi label penanda kategori hari ini beserta gabungan angka keseluruhan.
+        Dictionary berisi distribusi label hari ini plus total analisis.
     """
-    from src.db import get_db
-    conn = get_db()
+    from src.db import get_connection
+    import duckdb
+    db_path = get_connection()
 
     try:
-        stats = conn.execute("""
-            SELECT predicted_label, COUNT(*) as cnt,
-                   AVG(entropy) as avg_entropy,
-                   AVG(risk_score) as avg_risk
-            FROM analysis_logs
-            WHERE DATE(timestamp) = current_date
-            GROUP BY predicted_label
-        """).fetchdf()
-
-        total = conn.execute("""
-            SELECT COUNT(*) as total FROM analysis_logs
-            WHERE DATE(timestamp) = current_date
-        """).fetchone()[0]
+        with duckdb.connect(db_path, read_only=True) as conn:
+            stats = conn.execute("""
+                SELECT predicted_label, COUNT(*) as cnt,
+                       AVG(entropy) as avg_entropy,
+                       AVG(risk_score) as avg_risk
+                FROM analysis_logs
+                WHERE DATE(timestamp) = current_date
+                GROUP BY predicted_label
+            """).fetchdf()
+    
+            total = conn.execute("""
+                SELECT COUNT(*) as total FROM analysis_logs
+                WHERE DATE(timestamp) = current_date
+            """).fetchone()[0]
+            
+            fb_count = 0
+            try:
+                fb_count = conn.execute("SELECT COUNT(*) FROM feedback_logs").fetchone()[0]
+            except Exception:
+                pass
 
         dist = {}
         for _, row in stats.iterrows():
@@ -130,17 +140,11 @@ def get_daily_stats() -> dict:
                 "avg_risk": round(float(row["avg_risk"]), 1),
             }
 
-        # Perhitungan rekam koreksi
-        try:
-            fb_count = conn.execute("SELECT COUNT(*) FROM feedback_logs").fetchone()[0]
-        except Exception:
-            fb_count = 0
-
         return {
             "date": datetime.now().strftime("%Y-%m-%d"),
-            "total_analyzed": total,
+            "total_today": int(total),
             "distribution": dist,
-            "feedback_collected": fb_count,
+            "feedback_collected": int(fb_count)
         }
     except Exception as e:
         return {"error": str(e)}
@@ -153,7 +157,7 @@ def get_trend(days: int = 7) -> dict:
         days: Jumlah hari ke belakang. Default 7.
 
     Returns:
-        Indikator tren penegakan status selama berhari-hari mencatat persebaran masing-masing penanda kategori.
+        Dictionary berisi tren per hari dengan distribusi label.
     """
     from src.db import get_db
     conn = get_db()
@@ -186,7 +190,7 @@ def deep_analyze(text: str) -> dict:
         text: Teks berbahasa Indonesia yang akan dianalisis.
 
     Returns:
-        Kelompok hasil penilian mendasar semacam klasifikasi, angka tingkat potensi masalah, deteksi sinyal terkait ancaman terpendam dan cuplikan pelaporan utama.
+        Dictionary berisi hasil klasifikasi, risk score, sinyal, dan ringkasan.
     """
     from src.agents.orchestrator import run_pipeline
 
@@ -223,7 +227,7 @@ def get_latest_triage(limit: int = 20) -> dict:
         limit: Jumlah hasil terbaru yang dikembalikan. Default 20.
 
     Returns:
-        Urutan data keluaran klasifikasi tingkat dasar (triage) terbaru bersanding dengan informasi singkat proporsi sebarannya.
+        Dictionary berisi daftar hasil triage terbaru beserta ringkasan distribusi.
     """
     from src.db import get_db
     conn = get_db()
@@ -248,7 +252,7 @@ def get_latest_triage(limit: int = 20) -> dict:
                 "ambiguous": bool(row["is_ambiguous"]),
             })
 
-        # Kompilasi rincian kasar proporsi kategori status
+        # Summary stats
         dist = {}
         for r in rows:
             dist[r["label"]] = dist.get(r["label"], 0) + 1
@@ -262,7 +266,7 @@ def get_latest_triage(limit: int = 20) -> dict:
         return {"error": str(e), "count": 0, "results": []}
 
 
-# ─── Garis Panduan Karakter ─────────────────────────────────────────────────
+# ─── Definisi Agen ─────────────────────────────────────────────────
 
 AGENT_SYSTEM_PROMPT = """Kamu adalah analis intelijen senior Project Cartensz — sistem klasifikasi ancaman narasi untuk PT Gemilang Satria Perkasa.
 
@@ -292,7 +296,7 @@ KONTEKS TEKNIS:
 - Label: AMAN (aman), WASPADA (ambigu/perlu pantau), TINGGI (ancaman nyata)
 """
 
-# Kompilasi subagen ADK
+# Build ADK agent
 intel_agent = Agent(
     name="cartensz_intel",
     model="gemini-3-flash-preview",
@@ -301,7 +305,7 @@ intel_agent = Agent(
     tools=[search_threats, get_daily_stats, get_trend, deep_analyze, get_latest_triage],
 )
 
-# ─── Penahanan Data Selama Sesi & Komunikator Antar Model (runner singuler) ────────────────────────────────────
+# ─── Sesi & Runner (singleton) ────────────────────────────────────
 
 _session_service = InMemorySessionService()
 _runner = None
@@ -309,7 +313,7 @@ _session_id = None
 
 
 def _get_runner():
-    """Inisiasi instansiasi tertunda pada Runner ADK."""
+    """Inisiasi tertunda pada Runner ADK."""
     global _runner
     if _runner is None:
         _runner = Runner(
@@ -321,7 +325,7 @@ def _get_runner():
 
 
 async def _ensure_session(user_id: str = "analyst_default"):
-    """Validasi pembukaan siklus pencatatan sesi untuk profil analis bersangkutan, lunasi pembentukan struktur obrolan baru jika memang kosong."""
+    """Validasi pembukaan sesi pengguna, buat jika perlu."""
     global _session_id
     runner = _get_runner()
 
@@ -336,7 +340,7 @@ async def _ensure_session(user_id: str = "analyst_default"):
 
 
 async def _arun_agent(user_message: str, user_id: str = "analyst_default") -> str:
-    """Mengoperasikan sistem subagen intelijen di atas lapisan fungsi penangguhan waktu eksekusi paralel (async), dan kumpulkan galian kompilasi wawasan komprehensip untuk diberikan sebagai lontaran pemungkas obrolan balasan."""
+    """Jalankan agen secara asinkron dan ambil teks respons akhir."""
     runner = _get_runner()
     session_id = await _ensure_session(user_id)
 
@@ -360,10 +364,10 @@ async def _arun_agent(user_message: str, user_id: str = "analyst_default") -> st
 
 
 def run_agent(user_message: str, user_id: str = "analyst_default") -> str:
-    """Modul antarmuka perisai panggil fasa serempak yang diikat khusus mendasari penjelajahan panel layar Streamlit.
+    """Pembungkus sinkron untuk agen — digunakan oleh Streamlit.
     
-    Selalu aktifkan utas eksekusi di sasis siklus penyangga bebas dari utas fondasi induk utamanya
-    sebagai sarat pembuka blokade Streamlit mengatasi konflik ganda proses yang muncul dengan peringatan cacat bawaan sinkronik internalnya 'no current event loop in ScriptRunner'.
+    Selalu jalankan agen asinkron di event loop baru pada thread latar belakang
+    untuk menghindari error 'no current event loop' di Streamlit.
     """
     import concurrent.futures
 
@@ -380,23 +384,23 @@ def run_agent(user_message: str, user_id: str = "analyst_default") -> str:
             future = pool.submit(_run_in_new_loop)
             return future.result(timeout=60)
     except Exception as e:
-        return f"Gangguan mematikan: {e}"
+        return f"Error: {e}"
 
 
 def reset_session():
-    """Hapus sisa catatan kerangka rekam jejak riwayat ADK, model kini tak tersandera data bayangan peninggalan percakapan periode sebelumnya."""
+    """Reset sesi ADK agar LLM melupakan konteks sebelumnya."""
     global _session_id
     _session_id = None
 
 
-# ─── Sarana Eksekutor Lapangan ───────────────────────────────────────────────────────
+# ─── Tes Cepat ───────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("🤖 Agen Intel Cartensz — Terminal Interaktif")
-    print("Masukkan laju instruksional ke konsol sasaran, kirim kata kiasan 'exit' untuk menutup terowongan akses mesin.\n")
+    print("🤖 Cartensz Intel Agent — Interactive Mode")
+    print("Ketik pesan, atau 'exit' untuk keluar.\n")
     while True:
-        msg = input("Perintah Anda: ").strip()
+        msg = input("Anda: ").strip()
         if msg.lower() in ("exit", "quit", "q"):
             break
         reply = run_agent(msg)
-        print(f"\n🛡️ Utusan Taktis: {reply}\n")
+        print(f"\n🛡️ Agent: {reply}\n")

@@ -1,7 +1,5 @@
 """
-Sistem logging analisis DuckDB untuk Project Cartensz.
-Pengganti SQLite/ChromaDB. Basis data analitik SQL yang sangat cepat.
-Menyimpan semua request analisis dan umpan balik analis.
+Logger Analisis DuckDB Project Cartensz.
 """
 import duckdb
 import os
@@ -12,16 +10,18 @@ DB_PATH = os.path.join(DATA_DIR, "cartensz.duckdb")
 
 _conn = None
 
-def get_db():
-    global _conn
-    if _conn is None:
-        os.makedirs(DATA_DIR, exist_ok=True)
-        _conn = duckdb.connect(DB_PATH)
-        _init_db(_conn)
-    return _conn
+def get_db_path():
+    os.makedirs(DATA_DIR, exist_ok=True)
+    db_path = DB_PATH
+    # Inisialisasi tabel jika belum ada
+    with duckdb.connect(db_path) as conn:
+        _init_db(conn)
+    return db_path
+
+get_connection = get_db_path
 
 def _init_db(conn):
-    """buat tabel bila belum ada."""
+    """Buat tabel jika belum ada."""
     conn.execute("""
         CREATE TABLE IF NOT EXISTS analysis_logs (
             id VARCHAR PRIMARY KEY,
@@ -34,7 +34,7 @@ def _init_db(conn):
             confidence VARCHAR,
             entropy DOUBLE,
             is_ambiguous BOOLEAN,
-            pipeline_mode VARCHAR -- 'RADAR' (1 pemanggilan LLM) atau 'SWEEP' (0 LLM)
+            pipeline_mode VARCHAR -- 'RADAR' (1 LLM call) or 'SWEEP' (0 LLM call)
         )
     """)
     
@@ -59,45 +59,44 @@ def log_analysis(
     latency_ms: float,
     pipeline_mode: str = "RADAR"
 ):
-    """catat pergerakan mesin analisis ke dalam basis data."""
-    conn = get_db()
+    """Catat hasil analisis ke DuckDB."""
+    db_path = get_db_path()
     current_time = time.strftime('%Y-%m-%d %H:%M:%S')
     
-    # gunakan SQL parameter untuk menghindari celah injeksi
-    conn.execute("""
-        INSERT INTO analysis_logs (
-            id, timestamp, latency_ms, input_text,
+    with duckdb.connect(db_path) as conn:
+        conn.execute("""
+            INSERT INTO analysis_logs (
+                id, timestamp, latency_ms, input_text,
+                predicted_label, risk_score, confidence, entropy,
+                is_ambiguous, pipeline_mode
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (id) DO NOTHING
+        """, (
+            doc_id, current_time, latency_ms, text,
             predicted_label, risk_score, confidence, entropy,
             is_ambiguous, pipeline_mode
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT (id) DO NOTHING
-    """, (
-        doc_id, current_time, latency_ms, text,
-        predicted_label, risk_score, confidence, entropy,
-        is_ambiguous, pipeline_mode
-    ))
+        ))
 
 def save_feedback(text_hash: str, original_label: str, corrected_label: str, notes: str = None):
-    """catat perbaikan koreksi manual analis."""
-    conn = get_db()
+    """Simpan koreksi feedback analis."""
+    db_path = get_db_path()
     current_time = time.strftime('%Y-%m-%d %H:%M:%S')
     
-    conn.execute("""
-        INSERT INTO feedback_logs (text_hash, timestamp, original_label, corrected_label, notes)
-        VALUES (?, ?, ?, ?, ?)
-        ON CONFLICT (text_hash) DO UPDATE SET 
-            timestamp = EXCLUDED.timestamp,
-            corrected_label = EXCLUDED.corrected_label,
-            notes = EXCLUDED.notes
-    """, (text_hash, current_time, original_label, corrected_label, notes or ""))
+    with duckdb.connect(db_path) as conn:
+        conn.execute("""
+            INSERT INTO feedback_logs (text_hash, timestamp, original_label, corrected_label, notes)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT (text_hash) DO UPDATE SET 
+                timestamp = EXCLUDED.timestamp,
+                corrected_label = EXCLUDED.corrected_label,
+                notes = EXCLUDED.notes
+        """, (text_hash, current_time, original_label, corrected_label, notes or ""))
 
 def fetch_feedback():
-    """akses semua balasan revisi untuk melatih ulang (SetFit)."""
-    conn = get_db()
-    return conn.execute("SELECT * FROM feedback_logs").df()
+    """Ambil semua feedback (SetFit)."""
+    db_path = get_db_path()
+    with duckdb.connect(db_path) as conn:
+        return conn.execute("SELECT * FROM feedback_logs").df()
 
 def close_db():
-    global _conn
-    if _conn is not None:
-        _conn.close()
-        _conn = None
+    pass  # Tidak lagi diperlukan
