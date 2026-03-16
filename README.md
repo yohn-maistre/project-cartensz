@@ -1,12 +1,16 @@
 # Project Cartensz: Threat Intelligence Platform
 
+![Arsitektur Project Cartensz](docs/assets/project-cartensz-architecture.png)
+
 Sistem analisis intelijen ancaman otomatis untuk teks berbahasa Indonesia. Project Cartensz memproses ribuan teks mentah dari sumber OSINT terbuk (Reddit, RSS, YouTube), mengklasifikasikan tingkat risiko (Aman, Waspada, Tinggi), dan menyusun laporan intelijen singkat secara otonom.
 
 Tantangan utama yang diselesaikan oleh sistem ini adalah **nuansa linguistik**. Ancaman dalam bahasa Indonesia jarang menggunakan bahasa kekerasan eksplisit, melainkan menggunakan eufemisme (contoh: "sapu bersih"), percampuran bahasa kode, dan pembingkaian hiperbolik. Sistem ini tidak bergantung pada pencocokan kata kunci dasar (keyword matching), melainkan menggunakan kombinasi Machine Learning lokal yang mumpuni dan penalaran Agentic LLM.
 
-## Arsitektur Pipeline
+## ⚙️ Arsitektur Pipeline Fusi
 
-Pipeline analisis Cartensz terdiri dari analisis tunggal mendalam dan triase massal.
+Proyek ini dibangun menggunakan model efisien (*small/fast*) menyisir data mentah, dan model besar (*large/reasoning*) dipanggil hanya saat keraguan memuncak. Pendekatan ini memangkas biaya operasional API hingga lebih dari **95%** dibandingkan melemparkan semua data langsung ke model LLM.
+
+Pipeline analisis Cartensz terdiri dari analisis tunggal mendalam dan triase massal:
 
 1. **Pengumpulan (OSINT Scraper)**: Menarik data publik dari Reddit, RSS feed berita, dan komentar YouTube.
 2. **Triase Kecepatan Tinggi (Penyaring SetFit)**: Model SetFit (dilatih dari NusaBERT) berjalan secara lokal untuk memilah ribuan teks dalam hitungan detik. Teks berlabel "AMAN" langsung disembunyikan.
@@ -23,12 +27,6 @@ Pipeline analisis Cartensz terdiri dari analisis tunggal mendalam dan triase mas
 *   **`src/db.py`**: Pengelola skema DuckDB. Membuat tabel `analysis_logs` dan `feedback_logs` jika belum ada.
 *   **`src/ml/train_setfit.py`**: Skrip pelatihan model SetFit menggunakan argumen kontras (Contrastive Learning) yang cocok untuk skenario *Few-Shot Learning*.
 *   **`scripts/daily_scrape.py`**: Skrip *cron* untuk automasi penarikan OSINT harian.
-
-## ⚙️ Arsitektur
-
-![Arsitektur Project Cartensz](docs/assets/project-cartensz-architecture.png)
-
-Proyek ini dibangun menggunakan model efisien (*small/fast*) menyisir data mentah, dan model besar (*large/reasoning*) dipanggil hanya saat keraguan memuncak. Pendekatan ini memangkas biaya operasional API hingga lebih dari **95%** dibandingkan melemparkan semua data langsung ke model LLM.
 
 ## Deskripsi Dataset
 
