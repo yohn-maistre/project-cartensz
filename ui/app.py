@@ -326,18 +326,30 @@ with st.sidebar:
                 audio_name = mic_audio.name
 
         if audio_bytes and st.button("🎤 Transkripsi & Analisis", type="primary", use_container_width=True):
-            st.info("💡 **Catatan Utama ASR:** Transkripsi pertama kali akan mengunduh model ~1.2GB dan dapat memakan waktu 3-5 menit tergantung koneksi. UI mungkin mengindikasi *error/connection lost* saat proses ini berjalan di latar belakang terminal. Mohon tunggu proses di terminal selesai.")
-            with st.spinner("Mentranskripsi audio dengan Qwen3-ASR..."):
+            st.info("💡 **Catatan Utama ASR:** Proses transkripsi mungkin memakan waktu 1-3 menit. Jika ini pertama kalinya, server akan mengunduh model ~1.2GB di latar belakang.")
+            with st.spinner("Mentranskripsi audio dengan API Cartensz..."):
                 try:
-                    from src.asr.transcriber import transcribe_bytes
-                    asr_result = transcribe_bytes(audio_bytes, filename=audio_name)
-                    transcribed = asr_result["text"]
-                    st.success(f"Bahasa: {asr_result['language']}")
-                    st.text_area("Hasil Transkripsi:", transcribed, height=100, disabled=True)
-                    if transcribed.strip():
-                        st.session_state["_dialog_text"] = transcribed
+                    files = {"file": (audio_name, audio_bytes, "audio/wav")}
+                    data = {"language": "Indonesian", "run_analysis": False}
+                    response = requests.post(f"{API_URL}/transcribe", files=files, data=data, timeout=300)
+                    
+                    if response.status_code == 200:
+                        res_data = response.json()
+                        if res_data.get("success"):
+                            asr_result = res_data.get("transcription", {})
+                            transcribed = asr_result.get("text", "")
+                            st.success(f"Bahasa: {asr_result.get('language', 'Indonesian')}")
+                            st.text_area("Hasil Transkripsi:", transcribed, height=100, disabled=True)
+                            if transcribed.strip():
+                                st.session_state["_dialog_text"] = transcribed
+                        else:
+                            st.error(f"ASR Error: {res_data.get('error', 'Unknown Error')}")
+                    else:
+                        st.error(f"Gagal menghubungi server ASR (Code: {response.status_code}). Detail: {response.text}")
+                except requests.exceptions.Timeout:
+                    st.error("Waktu tunggu (timeout) habis. Server mungkin sedang mengunduh model secara lambat. Coba beberapa saat lagi.")
                 except Exception as e:
-                    st.error(f"ASR Error: {e}")
+                    st.error(f"Koneksi/ASR Error: {e}")
 
     # Jalankan Triage (di bawah input data)
     if st.session_state.get("raw_triage_texts") and not st.session_state.get("auto_radar_text"):
