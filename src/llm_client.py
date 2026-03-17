@@ -44,7 +44,7 @@ def get_gemini_keys() -> list[str]:
     base = os.getenv("GEMINI_API_KEY", "")
     if base:
         keys.append(base)
-    # rotasi variabel lainnya
+    # rotasi api key lainnya
     for i in range(2, 10):
         k = os.getenv(f"GEMINI_API_KEY_{i}", "")
         if k:

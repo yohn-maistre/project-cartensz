@@ -12,11 +12,7 @@ _conn = None
 
 def get_db_path():
     os.makedirs(DATA_DIR, exist_ok=True)
-    db_path = DB_PATH
-    # Inisialisasi tabel jika belum ada
-    with duckdb.connect(db_path) as conn:
-        _init_db(conn)
-    return db_path
+    return DB_PATH
 
 get_connection = get_db_path
 
@@ -64,6 +60,7 @@ def log_analysis(
     current_time = time.strftime('%Y-%m-%d %H:%M:%S')
     
     with duckdb.connect(db_path) as conn:
+        _init_db(conn)  # Ensure tables exist before writing
         conn.execute("""
             INSERT INTO analysis_logs (
                 id, timestamp, latency_ms, input_text,
@@ -83,6 +80,7 @@ def save_feedback(text_hash: str, original_label: str, corrected_label: str, not
     current_time = time.strftime('%Y-%m-%d %H:%M:%S')
     
     with duckdb.connect(db_path) as conn:
+        _init_db(conn)  # Ensure tables exist before writing
         conn.execute("""
             INSERT INTO feedback_logs (text_hash, timestamp, original_label, corrected_label, notes)
             VALUES (?, ?, ?, ?, ?)

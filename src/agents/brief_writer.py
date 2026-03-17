@@ -17,7 +17,6 @@ from typing import Optional
 
 from src.models import (
     NormalizedText,
-    SimilarExample,
     ClassificationResult,
     ThreatSignal,
     IntelligenceBrief,

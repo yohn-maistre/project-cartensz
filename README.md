@@ -54,7 +54,11 @@ Proyek ini menggunakan `uv` untuk manajemen dependensi yang super cepat, dan `do
    uv venv
    uv pip install -r requirements.txt
    ```
-3. Atur variabel lingkungan:
+3. Latih model SetFit lokal (Penting untuk Triase Massal):
+   ```bash
+   uv run python -m src.ml.train_setfit
+   ```
+4. Atur variabel lingkungan:
    ```bash
    cp .env.example .env
    # Edit .env dan masukkan GEMINI_API_KEY
